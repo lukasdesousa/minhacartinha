@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { LetterDraft } from "@/components/create/types";
 import { initialLetterDraft } from "@/components/create/types";
 import type { ApiErrorResponse, CreateLetterResponse } from "@/lib/letters/contracts";
@@ -18,11 +18,14 @@ export function CreatorWorkspace() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishError, setPublishError] = useState("");
   const [publishedLetter, setPublishedLetter] = useState<CreateLetterResponse | null>(null);
+  const publishingRef = useRef(false);
+  const requestKeyRef = useRef<string | null>(null);
 
   const updateDraft = useCallback((patch: Partial<LetterDraft>) => {
     setDraft((current) => ({ ...current, ...patch }));
     setPublishedLetter(null);
     setPublishError("");
+    requestKeyRef.current = null;
   }, []);
 
   const openPreview = useCallback(() => setPreviewOpen(true), []);
@@ -34,8 +37,9 @@ export function CreatorWorkspace() {
   }
 
   async function publishLetter() {
-    if (isPublishing) return;
+    if (publishingRef.current) return;
 
+    publishingRef.current = true;
     setIsPublishing(true);
     setPublishError("");
 
@@ -50,10 +54,12 @@ export function CreatorWorkspace() {
             ? relationshipStart.toISOString()
             : "",
       };
+      requestKeyRef.current ??= crypto.randomUUID();
       const response = await fetch("/api/letters", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Idempotency-Key": requestKeyRef.current,
         },
         body: JSON.stringify(payload),
       });
@@ -71,6 +77,7 @@ export function CreatorWorkspace() {
           : "Não foi possível publicar a cartinha. Tente novamente.",
       );
     } finally {
+      publishingRef.current = false;
       setIsPublishing(false);
     }
   }

@@ -30,6 +30,35 @@ export function StoryStep({ draft, onChange }: StoryStepProps) {
             onChange={(event) => onChange({ senderName: event.target.value })}
           />
         </div>
+        <div className="mt-5 rounded-2xl border border-[#eadde0] bg-[#fbf5f6] p-4 sm:p-5">
+          <TextField
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            label="E-mail para entregar a cartinha"
+            hint="Link + QR Code"
+            placeholder="amor@exemplo.com"
+            value={draft.recipientEmail}
+            maxLength={254}
+            required
+            onChange={(event) => onChange({ recipientEmail: event.target.value })}
+          />
+          <p className="mt-2 text-xs leading-5 text-[#8b7079]">
+            Enviaremos uma única mensagem com o acesso. O e-mail nunca aparecerá na página pública.
+          </p>
+        </div>
+        <div className="absolute left-[-9999px] top-auto size-px overflow-hidden" aria-hidden="true">
+          <label htmlFor="website">Não preencha este campo</label>
+          <input
+            id="website"
+            name="website"
+            type="text"
+            tabIndex={-1}
+            autoComplete="off"
+            value={draft.website}
+            onChange={(event) => onChange({ website: event.target.value })}
+          />
+        </div>
       </FieldGroup>
 
       <div className="h-px bg-[#eee5e7]" />

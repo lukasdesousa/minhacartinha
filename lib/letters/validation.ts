@@ -18,6 +18,7 @@ export type ValidatedLetterImage = {
 
 export type ValidatedLetterInput = {
   recipientName: string;
+  recipientEmail: string;
   senderName: string;
   title: string;
   message: string;
@@ -75,6 +76,25 @@ function booleanValue(record: Record<string, unknown>, key: string, label: strin
     throw new LetterValidationError(`${label} é inválido.`);
   }
   return value;
+}
+
+function recipientEmailValue(value: unknown) {
+  if (typeof value !== "string") {
+    throw new LetterValidationError("Informe o e-mail que receberá a cartinha.");
+  }
+
+  const email = value.trim().toLowerCase();
+  if (
+    !email ||
+    email.length > 254 ||
+    email.includes("\r") ||
+    email.includes("\n") ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/u.test(email)
+  ) {
+    throw new LetterValidationError("Informe um endereço de e-mail válido.");
+  }
+
+  return email;
 }
 
 function relationshipStartedAtValue(value: unknown) {
@@ -183,6 +203,9 @@ export function parseLetterPayload(value: unknown): ValidatedLetterInput {
   if (!isRecord(favoritePlace) || !isRecord(song) || !Array.isArray(gallery)) {
     throw new LetterValidationError("Alguns detalhes da cartinha são inválidos.");
   }
+  if (typeof value.website === "string" && value.website.trim()) {
+    throw new LetterValidationError("Não foi possível validar este envio.");
+  }
   if (gallery.length > MAX_GALLERY_PHOTOS) {
     throw new LetterValidationError(`Adicione no máximo ${MAX_GALLERY_PHOTOS} fotos ao carrossel.`);
   }
@@ -228,6 +251,7 @@ export function parseLetterPayload(value: unknown): ValidatedLetterInput {
 
   return {
     recipientName: requiredText(value, "recipientName", "O nome de quem recebe", 40),
+    recipientEmail: recipientEmailValue(value.recipientEmail),
     senderName: requiredText(value, "senderName", "Seu nome", 40),
     title: requiredText(value, "title", "O título", 70),
     message: requiredText(value, "message", "A mensagem", 900),

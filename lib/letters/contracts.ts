@@ -2,6 +2,10 @@ export type CreateLetterResponse = {
   id: string;
   slug: string;
   path: string;
+  publicUrl: string;
+  qrCodeDataUrl: string;
+  emailStatus: "sent" | "failed" | "pending";
+  emailMessage: string;
 };
 
 export type ApiErrorResponse = {

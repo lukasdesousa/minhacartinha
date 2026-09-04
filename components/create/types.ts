@@ -47,6 +47,7 @@ export type GalleryPhoto = {
 
 export type LetterDraft = {
   recipientName: string;
+  recipientEmail: string;
   senderName: string;
   title: string;
   message: string;
@@ -67,10 +68,12 @@ export type LetterDraft = {
   themeId: ThemeId;
   showRelationshipTime: boolean;
   showMusic: boolean;
+  website: string;
 };
 
 export const initialLetterDraft: LetterDraft = {
   recipientName: "Gabriel",
+  recipientEmail: "",
   senderName: "Clara",
   title: "Para o amor da minha vida",
   message:
@@ -92,6 +95,7 @@ export const initialLetterDraft: LetterDraft = {
   themeId: "vinho",
   showRelationshipTime: true,
   showMusic: true,
+  website: "",
 };
 
 export function getTheme(themeId: ThemeId) {

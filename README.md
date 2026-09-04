@@ -30,7 +30,7 @@ npm run db:deploy
 npm run dev
 ```
 
-Acesse [http://localhost:3000](http://localhost:3000). O editor fica em `/criar` e cada cartinha publicada é aberta em `/para/[slug]`.
+Acesse [http://localhost:3000](http://localhost:3000). O editor fica em `/criar` e cada cartinha publicada é aberta em `/c/[identificador]`. Endereços antigos em `/para/[slug]` são redirecionados automaticamente.
 
 ## Comandos
 
@@ -62,7 +62,7 @@ Requisitos do ambiente de deploy:
 - Node.js 22 ou superior (fixado em `.node-version`)
 - uma conta Cloudflare com Workers habilitado
 - as migrations do Prisma aplicadas no Neon
-- os cinco valores de `.env.example` configurados como secrets do Worker
+- os valores obrigatórios listados em `wrangler.jsonc` configurados como secrets do Worker
 
 Para validar tudo localmente sem publicar:
 
@@ -91,17 +91,21 @@ Deploy command: npm run deploy:vinext
 Root directory: /
 ```
 
-Cadastre `DATABASE_URL`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` e `CLOUDINARY_FOLDER_NAME` nos secrets do Worker. A instalação das dependências e o `prisma generate` não precisam acessar o banco. Se as migrations forem executadas no pipeline, cadastre `DATABASE_URL` também como secret do ambiente de build e rode `npm run db:deploy` antes do build de produção.
+Cadastre `DATABASE_URL`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_FOLDER_NAME`, `RESEND_API_KEY` e `RESEND_DOMAIN` nos secrets do Worker. `NEXT_PUBLIC_APP_URL`, `RESEND_FROM_EMAIL` e `RESEND_REPLY_TO_EMAIL` são sobrescritas opcionais. A instalação das dependências e o `prisma generate` não precisam acessar o banco. Se as migrations forem executadas no pipeline, cadastre `DATABASE_URL` também como secret do ambiente de build e rode `npm run db:deploy` antes do build de produção.
+
+Por padrão, o link público usa `https://RESEND_DOMAIN` e o remetente usa `Minha Cartinha <cartinhas@RESEND_DOMAIN>`. O domínio precisa estar verificado no Resend. Se o site usar outra origem, defina `NEXT_PUBLIC_APP_URL` sem barra final. O QR Code é gerado em memória para cada entrega e incorporado ao e-mail por CID; nenhum arquivo de QR Code é persistido.
 
 O acesso atual ao Neon usa `pg`/Prisma por TCP com `nodejs_compat`. Para um volume maior, o Hyperdrive pode ser acrescentado depois como camada de pooling regional, sem ser necessário para o primeiro deploy.
 
 ## Organização
 
 - `app/api/letters`: publicação de cartinhas
-- `app/para/[slug]`: experiência pública compartilhável
+- `app/c/[slug]`: experiência pública compartilhável, privada para mecanismos de busca
+- `app/para/[slug]`: compatibilidade e redirecionamento dos links antigos
+- `lib/email`: template responsivo e integração isolada com o Resend
 - `components/create`: editor e prévia em tempo real
 - `components/letter`: página da cartinha publicada
-- `lib/letters`: contratos, validação, slug e consultas
+- `lib/letters`: contratos, validação, identificadores públicos e consultas
 - `prisma`: schema e histórico de migrations
 
 As imagens são otimizadas no navegador, validadas novamente no servidor e enviadas ao Cloudinary. O Neon guarda os dados da cartinha e apenas os identificadores, URLs e metadados dos arquivos.

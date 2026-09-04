@@ -1,12 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
 import type { LetterDraft } from "@/components/create/types";
 import type { CreateLetterResponse } from "@/lib/letters/contracts";
-import { createLetterSlug } from "@/lib/letters/slug";
+import { PublishedSuccess } from "@/components/create/published-success";
 import { getSpotifyTrackId } from "@/lib/spotify";
-import { ArrowIcon, CheckIcon, EyeIcon, LinkIcon, LockIcon, PhotoIcon, SparklesIcon } from "@/components/ui/icons";
+import { ArrowIcon, CheckIcon, EyeIcon, LockIcon, PhotoIcon, SparklesIcon } from "@/components/ui/icons";
 
 type ReviewStepProps = {
   draft: LetterDraft;
@@ -25,9 +23,9 @@ export function ReviewStep({
   publishError,
   publishedLetter,
 }: ReviewStepProps) {
-  const [copied, setCopied] = useState(false);
   const checks = [
     { label: "Mensagem escrita", complete: Boolean(draft.message.trim()) },
+    { label: "E-mail para entrega", complete: Boolean(draft.recipientEmail.trim()) },
     { label: "Foto principal", complete: Boolean(draft.heroImage) },
     { label: "Carrossel de momentos", complete: draft.gallery.length > 0 },
     { label: "Lugar favorito", complete: Boolean(draft.favoritePlace.name.trim()) },
@@ -37,6 +35,7 @@ export function ReviewStep({
   const completed = checks.filter((item) => item.complete).length;
   const canPublish = Boolean(
     draft.recipientName.trim() &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/u.test(draft.recipientEmail.trim()) &&
       draft.senderName.trim() &&
       draft.title.trim() &&
       draft.message.trim() &&
@@ -45,13 +44,6 @@ export function ReviewStep({
       draft.closingText.trim() &&
       (!draft.song.spotifyUrl.trim() || getSpotifyTrackId(draft.song.spotifyUrl)),
   );
-
-  async function copyPublishedLink() {
-    if (!publishedLetter) return;
-    await navigator.clipboard.writeText(`${window.location.origin}${publishedLetter.path}`);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 2000);
-  }
 
   return (
     <div className="space-y-7">
@@ -104,7 +96,7 @@ export function ReviewStep({
             <span className="text-[10px] font-bold uppercase tracking-[0.14em]">Endereço da cartinha</span>
           </div>
           <p className="mt-5 break-all rounded-xl border border-[#e2d4d8] bg-white px-3 py-3 text-xs font-semibold text-[#774356]">
-            minhacartinha.com/para/{createLetterSlug(draft.recipientName)}-...
+            minhacartinha.com.br/c/identificador-seguro
           </p>
           <p className="mt-4 text-xs leading-5 text-[#8d747c]">
             Ao publicar, criaremos um endereço exclusivo para você compartilhar com segurança e sem precisar de cadastro.
@@ -113,37 +105,7 @@ export function ReviewStep({
       </div>
 
       {publishedLetter ? (
-        <div className="rounded-3xl border border-[#cfdfca] bg-[#f3f8f1] p-5 sm:p-6" aria-live="polite">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[#dcebd7] text-[#4d7348]">
-                <CheckIcon className="size-5" aria-hidden="true" />
-              </span>
-              <div>
-                <h3 className="font-serif text-2xl font-semibold text-[#39523a]">Sua cartinha está no ar</h3>
-                <p className="mt-1 text-xs leading-5 text-[#647a63]">O conteúdo e as imagens foram salvos e o link já pode ser compartilhado.</p>
-              </div>
-            </div>
-            <Link
-              href={publishedLetter.path}
-              className="group inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[#4f744a] px-5 text-xs font-bold text-white transition-all hover:-translate-y-0.5 hover:bg-[#405f3c] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f744a]"
-            >
-              Abrir cartinha
-              <ArrowIcon className="size-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
-            </Link>
-          </div>
-          <div className="mt-5 flex flex-col gap-2 rounded-2xl border border-[#d7e4d3] bg-white/80 p-3 sm:flex-row sm:items-center">
-            <code className="min-w-0 flex-1 truncate text-xs font-semibold text-[#4e694d]">{publishedLetter.path}</code>
-            <button
-              type="button"
-              onClick={() => void copyPublishedLink()}
-              className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-[#cfddcb] px-3 text-[11px] font-bold text-[#4e694d] transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f744a]"
-            >
-              <LinkIcon className="size-3.5" aria-hidden="true" />
-              {copied ? "Link copiado" : "Copiar link"}
-            </button>
-          </div>
-        </div>
+        <PublishedSuccess letter={publishedLetter} />
       ) : (
         <div className="rounded-3xl border border-[#e4d5d9] bg-[#fff9fa] p-5 sm:p-6">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">

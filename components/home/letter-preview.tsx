@@ -17,7 +17,7 @@ export function LetterPreview() {
               <span className="size-2 rounded-full bg-[#bfc5df]" />
             </div>
             <div className="rounded-full bg-[#f5ebed] px-3 py-1 text-[8px] font-medium tracking-wide text-[#99727d] sm:px-5 sm:text-[9px]">
-              minhacartinha.com/para-gabriel
+              minhacartinha.com.br/c/8f3a2c7e...
             </div>
             <SparklesIcon className="size-3.5 text-[#b16a7e]" aria-hidden="true" />
           </div>

@@ -62,7 +62,7 @@ Requisitos do ambiente de deploy:
 - Node.js 22 ou superior (fixado em `.node-version`)
 - uma conta Cloudflare com Workers habilitado
 - as migrations do Prisma aplicadas no Neon
-- os valores obrigatórios listados em `wrangler.jsonc` configurados como secrets do Worker
+- os valores de produção de `.env.example` configurados como secrets do Worker
 
 Para validar tudo localmente sem publicar:
 
@@ -91,7 +91,9 @@ Deploy command: npm run deploy:vinext
 Root directory: /
 ```
 
-Cadastre `DATABASE_URL`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_FOLDER_NAME`, `RESEND_API_KEY` e `RESEND_DOMAIN` nos secrets do Worker. `NEXT_PUBLIC_APP_URL`, `RESEND_FROM_EMAIL` e `RESEND_REPLY_TO_EMAIL` são sobrescritas opcionais. A instalação das dependências e o `prisma generate` não precisam acessar o banco. Se as migrations forem executadas no pipeline, cadastre `DATABASE_URL` também como secret do ambiente de build e rode `npm run db:deploy` antes do build de produção.
+Cadastre `DATABASE_URL`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_FOLDER_NAME`, `RESEND_API_KEY` e `RESEND_DOMAIN` em **Settings > Variables and Secrets** do Worker. `NEXT_PUBLIC_APP_URL`, `RESEND_FROM_EMAIL` e `RESEND_REPLY_TO_EMAIL` são sobrescritas opcionais. A instalação das dependências e o `prisma generate` não precisam acessar o banco. Se as migrations forem executadas no pipeline, cadastre `DATABASE_URL` também como secret do ambiente de build e rode `npm run db:deploy` antes do build de produção.
+
+Esses nomes não são declarados como `secrets.required` no Wrangler porque o Workers Builds valida os secrets do Worker apenas no deploy e bloqueia a primeira publicação quando um secret novo ainda não foi cadastrado. A aplicação valida as configurações no momento de uso: sem Resend, a cartinha continua salva e o usuário recebe o estado de falha do e-mail; sem banco ou Cloudinary, as operações correspondentes retornam erro controlado. Depois de cadastrar os secrets no painel, os deploys seguintes os preservam automaticamente.
 
 Por padrão, o link público usa `https://RESEND_DOMAIN` e o remetente usa `Minha Cartinha <cartinhas@RESEND_DOMAIN>`. O domínio precisa estar verificado no Resend. Se o site usar outra origem, defina `NEXT_PUBLIC_APP_URL` sem barra final. O QR Code é gerado em memória para cada entrega e incorporado ao e-mail por CID; nenhum arquivo de QR Code é persistido.
 

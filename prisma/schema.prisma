@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+  runtime  = "cloudflare"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum LetterTheme {
+  ROMANCE
+  LAVENDER
+  SUNSET
+}
+
+enum LetterStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum LetterImageRole {
+  HERO
+  GALLERY
+  FAVORITE_PLACE
+}
+
+model Letter {
+  id                    String        @id @default(cuid())
+  slug                  String        @unique @db.VarChar(100)
+  recipientName         String        @db.VarChar(40)
+  senderName            String        @db.VarChar(40)
+  title                 String        @db.VarChar(70)
+  message               String        @db.Text
+  signature             String        @db.VarChar(60)
+  relationshipStartedAt DateTime?
+  openingText           String        @db.VarChar(70)
+  closingText           String        @db.VarChar(100)
+  favoritePlaceName     String?       @db.VarChar(60)
+  favoritePlaceCaption  String?       @db.VarChar(180)
+  songTitle             String?       @db.VarChar(60)
+  songArtist            String?       @db.VarChar(70)
+  spotifyUrl            String?       @db.VarChar(300)
+  theme                 LetterTheme   @default(ROMANCE)
+  showRelationshipTime  Boolean       @default(true)
+  showMusic             Boolean       @default(true)
+  status                LetterStatus  @default(DRAFT)
+  publishedAt           DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  images                LetterImage[]
+
+  @@index([status, createdAt])
+  @@map("letters")
+}
+
+model LetterImage {
+  id        String          @id @default(cuid())
+  letterId  String
+  role      LetterImageRole
+  position  Int             @default(0)
+  caption   String?         @db.VarChar(180)
+  assetId   String          @unique @db.VarChar(255)
+  publicId  String          @unique @db.VarChar(255)
+  secureUrl String          @db.VarChar(600)
+  format    String          @db.VarChar(20)
+  width     Int
+  height    Int
+  size      Int
+  createdAt DateTime        @default(now())
+  letter    Letter          @relation(fields: [letterId], references: [id], onDelete: Cascade)
+
+  @@index([letterId, role, position])
+  @@map("letter_images")
+}

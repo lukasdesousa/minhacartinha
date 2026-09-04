@@ -1,0 +1,42 @@
+export type CreateLetterResponse = {
+  id: string;
+  slug: string;
+  path: string;
+};
+
+export type ApiErrorResponse = {
+  error: string;
+};
+
+export type PublicGalleryPhoto = {
+  id: string;
+  src: string;
+  caption: string;
+};
+
+export type PublicLetterData = {
+  slug: string;
+  recipientName: string;
+  senderName: string;
+  title: string;
+  message: string;
+  signature: string;
+  relationshipStartedAt: string;
+  openingText: string;
+  closingText: string;
+  heroImage: string;
+  gallery: PublicGalleryPhoto[];
+  favoritePlace: {
+    name: string;
+    caption: string;
+    image: string;
+  };
+  song: {
+    title: string;
+    artist: string;
+    spotifyUrl: string;
+  };
+  themeId: "vinho" | "lavanda" | "entardecer";
+  showRelationshipTime: boolean;
+  showMusic: boolean;
+};

@@ -3,7 +3,7 @@ import { permanentRedirect } from "next/navigation";
 import { getPublicLetterPath } from "@/lib/letters/public-url";
 
 export const metadata: Metadata = {
-  title: "Uma cartinha especial | Minha Cartinha",
+  title: "Uma cartinha especial",
   robots: { index: false, follow: false, noarchive: true, nosnippet: true },
 };
 

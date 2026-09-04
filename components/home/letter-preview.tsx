@@ -22,7 +22,7 @@ export function LetterPreview() {
             <SparklesIcon className="size-3.5 text-[#b16a7e]" aria-hidden="true" />
           </div>
 
-          <article className="paper-texture relative min-h-[380px] overflow-hidden bg-[#fffdfb] px-5 py-8 text-center sm:min-h-[460px] sm:px-12 sm:py-11">
+          <div className="paper-texture relative min-h-[380px] overflow-hidden bg-[#fffdfb] px-5 py-8 text-center sm:min-h-[460px] sm:px-12 sm:py-11">
             <svg
               className="absolute -left-5 -top-5 size-28 text-[#d7a9b5]/30 sm:size-36"
               viewBox="0 0 140 140"
@@ -49,9 +49,9 @@ export function LetterPreview() {
               <p className="mb-2 text-[9px] font-semibold uppercase tracking-[0.26em] text-[#a0707d] sm:text-[10px]">
                 Nossa história
               </p>
-              <h2 className="font-serif text-[2.25rem] font-semibold leading-none tracking-[-0.04em] text-[#5c2435] sm:text-[3.4rem]">
+              <p className="font-serif text-[2.25rem] font-semibold leading-none tracking-[-0.04em] text-[#5c2435] sm:text-[3.4rem]">
                 Clara <span className="font-normal italic text-[#b0697d]">&amp;</span> Gabriel
-              </h2>
+              </p>
               <div className="my-4 h-px w-12 bg-[#ddb9c2] sm:my-6" />
               <p className="font-serif text-lg italic leading-relaxed text-[#704451] sm:text-[1.35rem]">
                 “Em todos os meus dias favoritos, existe um pedacinho de você.”
@@ -66,7 +66,7 @@ export function LetterPreview() {
                 12 de junho de 2026
               </time>
             </div>
-          </article>
+          </div>
         </div>
       </div>
 

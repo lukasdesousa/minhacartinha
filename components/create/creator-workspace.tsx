@@ -96,10 +96,10 @@ export function CreatorWorkspace() {
               <div>
                 <div className="inline-flex items-center gap-2 rounded-full border border-[#e3d2d7] bg-white/60 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-[#985168]">
                   <SparklesIcon className="size-3" aria-hidden="true" />
-                  Ateliê da sua história
+                  Ateliê gratuito da sua história
                 </div>
                 <h1 className="mt-4 font-serif text-[2.8rem] font-semibold leading-[0.95] tracking-[-0.045em] text-[#481d2b] sm:text-5xl">
-                  Crie algo que só vocês poderiam sentir.
+                  Crie grátis algo que só vocês poderiam sentir.
                 </h1>
               </div>
               <p className="max-w-md text-sm leading-6 text-[#806871] md:text-right">

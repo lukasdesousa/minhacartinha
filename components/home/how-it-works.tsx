@@ -17,7 +17,7 @@ const steps = [
   {
     number: "03",
     title: "Compartilhe",
-    description: "Envie o link e transforme um dia comum em uma lembrança inesquecível.",
+    description: "Envie por link, QR Code ou e-mail e transforme um dia comum em uma lembrança inesquecível.",
     icon: LinkIcon,
   },
 ];
@@ -28,8 +28,8 @@ export function HowItWorks() {
       <div className="mx-auto max-w-6xl px-5 sm:px-8 lg:px-10">
         <SectionHeading
           eyebrow="Simples e especial"
-          title="Seu amor, contado do seu jeito"
-          description="Você cuida das palavras. A gente transforma tudo em uma experiência linda para guardar e compartilhar."
+          title="Crie sua cartinha online em três passos"
+          description="A criação é gratuita: você cuida das palavras e a gente transforma tudo em uma experiência linda para guardar e compartilhar."
         />
 
         <ol className="relative mt-16 grid gap-10 md:grid-cols-3 md:gap-8 lg:mt-20">

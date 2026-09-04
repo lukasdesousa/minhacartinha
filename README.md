@@ -113,3 +113,15 @@ O acesso atual ao Neon usa `pg`/Prisma por TCP com `nodejs_compat`. Para um volu
 As imagens são otimizadas no navegador, validadas novamente no servidor e enviadas ao Cloudinary. O Neon guarda os dados da cartinha e apenas os identificadores, URLs e metadados dos arquivos.
 
 Links de música são normalizados no servidor e exibidos pelo Embed oficial do Spotify, sem necessidade de credenciais adicionais. A data de início do relacionamento é salva como data e hora e alimenta o contador dinâmico da experiência publicada.
+
+## SEO e indexação
+
+A Home e `/criar` possuem metadata própria, canonical no domínio sem `www`, imagem Open Graph, Twitter Card e dados estruturados coerentes com o conteúdo visível. O sitemap contém somente essas duas páginas indexáveis. Cartinhas pessoais em `/c/[slug]` permanecem fora do sitemap e usam `noindex`, `noarchive`, `nosnippet`, `no-store` e `no-referrer`; elas não são bloqueadas no `robots.txt` para que os buscadores consigam ler a diretiva `noindex`.
+
+Checklist externo após cada deploy de produção:
+
+- habilitar **Always Use HTTPS** na Cloudflare;
+- criar o DNS de `www` e redirecioná-lo permanentemente para `https://minhacartinha.com.br`;
+- cadastrar uma propriedade de domínio no Google Search Console e enviar `https://minhacartinha.com.br/sitemap.xml`;
+- validar a Home no Rich Results Test e acompanhar Core Web Vitals com dados reais de campo;
+- conferir se HTML público passou a receber cache no edge depois do aquecimento da nova versão.

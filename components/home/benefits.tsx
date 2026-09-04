@@ -14,7 +14,7 @@ const benefits = [
   },
   {
     title: "Um link para emocionar",
-    description: "Compartilhe a surpresa de um jeito simples, íntimo e memorável.",
+    description: "Compartilhe sua carta digital por link, QR Code ou e-mail, de um jeito simples e íntimo.",
     icon: LinkIcon,
   },
   {
@@ -52,9 +52,9 @@ export function Benefits() {
                 <p className="text-[8px] font-bold uppercase tracking-[0.24em] text-[#aa7382]">
                   Para o amor da minha vida
                 </p>
-                <h3 className="mt-3 font-serif text-4xl font-semibold tracking-[-0.04em] text-[#61273a] sm:text-[2.7rem]">
+                <p className="mt-3 font-serif text-4xl font-semibold tracking-[-0.04em] text-[#61273a] sm:text-[2.7rem]">
                   Nós dois
-                </h3>
+                </p>
                 <p className="mt-2 font-serif text-lg italic text-[#9b5a6d]">
                   desde o nosso primeiro sorriso
                 </p>
@@ -96,8 +96,8 @@ export function Benefits() {
           <SectionHeading
             align="left"
             eyebrow="Cada detalhe importa"
-            title="Muito mais que uma mensagem"
-            description="Uma pequena experiência criada para tocar o coração, surpreender e ficar na memória."
+            title="Tudo para criar uma surpresa romântica"
+            description="Reúna palavras e memórias em uma carta de amor digital feita para tocar o coração e ficar na lembrança."
           />
 
           <ul className="mt-10 divide-y divide-[#dfd1d4]">

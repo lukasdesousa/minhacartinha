@@ -19,14 +19,14 @@ export function FinalCta() {
           Faça alguém se sentir ainda mais amado hoje.
         </h2>
         <p className="mx-auto mt-6 max-w-xl text-base leading-7 text-[#79616a]">
-          Transforme tudo o que você sente em um presente único, delicado e impossível de esquecer.
+          Transforme tudo o que você sente em um presente virtual gratuito, delicado e impossível de esquecer.
         </p>
         <ButtonLink href="/criar" className="mt-9 min-h-14 px-8 text-base">
-          Criar minha cartinha
+          Criar minha cartinha grátis
         </ButtonLink>
         <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-[#a0828a]">
           <SparklesIcon className="size-3.5" aria-hidden="true" />
-          Leva só alguns minutos para começar
+          A criação é gratuita e leva só alguns minutos
         </p>
       </div>
     </section>

@@ -8,7 +8,7 @@ import { getPublishedLetterBySlug } from "@/lib/letters/queries";
 export const runtime = "nodejs";
 
 export const metadata: Metadata = {
-  title: "Uma cartinha especial | Minha Cartinha",
+  title: "Uma cartinha especial",
   description: "Uma surpresa feita com carinho está esperando para ser aberta.",
   robots: {
     index: false,

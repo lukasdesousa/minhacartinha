@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
+import { siteConfig } from "@/lib/seo";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -14,9 +15,25 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "Minha Cartinha | Palavras para quem você ama",
-  description:
-    "Crie uma cartinha digital romântica, personalizada e pronta para compartilhar com alguém especial.",
+  metadataBase: new URL(siteConfig.url),
+  title: {
+    default: siteConfig.title,
+    template: `%s | ${siteConfig.name}`,
+  },
+  description: siteConfig.description,
+  applicationName: siteConfig.name,
+  creator: siteConfig.name,
+  publisher: siteConfig.name,
+  category: "lifestyle",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+  },
+};
+
+export const viewport: Viewport = {
+  colorScheme: "light",
+  themeColor: "#fcfaf8",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

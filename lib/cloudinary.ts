@@ -4,23 +4,26 @@ import { v2 as cloudinary } from "cloudinary";
 import type { UploadApiResponse } from "cloudinary";
 import type { ValidatedLetterImage } from "@/lib/letters/validation";
 
-const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-const apiKey = process.env.CLOUDINARY_API_KEY;
-const apiSecret = process.env.CLOUDINARY_API_SECRET;
-const baseFolder = process.env.CLOUDINARY_FOLDER_NAME?.trim() || "minha-cartinha";
+function getCloudinaryClient() {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
-if (!cloudName || !apiKey || !apiSecret) {
-  throw new Error(
-    "Defina CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY e CLOUDINARY_API_SECRET.",
-  );
+  if (!cloudName || !apiKey || !apiSecret) {
+    throw new Error(
+      "Defina CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY e CLOUDINARY_API_SECRET.",
+    );
+  }
+
+  cloudinary.config({
+    cloud_name: cloudName,
+    api_key: apiKey,
+    api_secret: apiSecret,
+    secure: true,
+  });
+
+  return cloudinary;
 }
-
-cloudinary.config({
-  cloud_name: cloudName,
-  api_key: apiKey,
-  api_secret: apiSecret,
-  secure: true,
-});
 
 export type UploadedLetterImage = {
   assetId: string;
@@ -43,7 +46,9 @@ export function uploadLetterImage(
   uploadBatchId: string,
 ): Promise<UploadedLetterImage> {
   return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
+    const client = getCloudinaryClient();
+    const baseFolder = process.env.CLOUDINARY_FOLDER_NAME?.trim() || "minha-cartinha";
+    const stream = client.uploader.upload_stream(
       {
         resource_type: "image",
         asset_folder: `${baseFolder}/cartinhas/${uploadBatchId}`,
@@ -82,9 +87,10 @@ function uploadResult(result: UploadApiResponse): UploadedLetterImage {
 }
 
 export async function removeCloudinaryImages(publicIds: string[]) {
+  const client = getCloudinaryClient();
   const results = await Promise.allSettled(
     publicIds.map((publicId) =>
-      cloudinary.uploader.destroy(publicId, {
+      client.uploader.destroy(publicId, {
         resource_type: "image",
         invalidate: true,
       }),

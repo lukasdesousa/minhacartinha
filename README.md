@@ -45,7 +45,8 @@ npm run db:deploy    # aplica migrations existentes
 npm run db:studio    # abre o Prisma Studio
 npm run check:vinext # verifica compatibilidade com o runtime Cloudflare
 npm run dev:vinext   # desenvolvimento pelo runtime vinext (porta 3001)
-npm run build:vinext # gera o Worker e os assets em dist/
+npm run build        # gera o Worker e os assets em dist/
+npm run build:next   # valida opcionalmente o build nativo do Next.js
 npm run preview:cloudflare # build + Worker local pelo Wrangler
 npm run deploy:cloudflare:dry # valida o pacote sem publicar
 npm run deploy:cloudflare # build + deploy do Worker
@@ -85,7 +86,7 @@ O arquivo `.env` continua ignorado pelo Git e não é empacotado como asset. Nos
 Ao conectar o repositório ao Workers Builds, use:
 
 ```text
-Build command:  npm run build:vinext
+Build command:  npm run build
 Deploy command: npm run deploy:vinext
 Root directory: /
 ```

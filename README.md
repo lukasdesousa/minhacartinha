@@ -54,7 +54,7 @@ npm run cf-typegen   # atualiza os tipos dos bindings Cloudflare
 
 ## Deploy na Cloudflare
 
-O projeto usa o caminho atualmente recomendado pela Cloudflare para Next.js 16: `vinext` sobre Cloudflare Workers. A configuraÃ§Ã£o principal estÃ¡ em `wrangler.jsonc`; o build gera a configuraÃ§Ã£o publicÃ¡vel em `dist/server/wrangler.json`.
+O projeto usa o caminho atualmente recomendado pela Cloudflare para Next.js 16: `vinext` sobre Cloudflare Workers. A configuração principal está em `wrangler.jsonc`; o build gera a configuração publicável em `dist/server/wrangler.json`.
 
 Requisitos do ambiente de deploy:
 
@@ -71,7 +71,7 @@ npm run deploy:cloudflare:dry
 npm run preview:cloudflare
 ```
 
-No primeiro deploy feito pela sua mÃ¡quina, autentique o Wrangler e envie o cÃ³digo e os secrets em uma Ãºnica operaÃ§Ã£o:
+No primeiro deploy feito pela sua máquina, autentique o Wrangler e envie o código e os secrets em uma única operação:
 
 ```bash
 npx wrangler login
@@ -80,9 +80,9 @@ npm run build:vinext
 npx wrangler deploy --secrets-file .env --config dist/server/wrangler.json
 ```
 
-O arquivo `.env` continua ignorado pelo Git e nÃ£o Ã© empacotado como asset. Nos prÃ³ximos deploys, depois que os secrets jÃ¡ existirem no Worker, use `npm run deploy:cloudflare`.
+O arquivo `.env` continua ignorado pelo Git e não é empacotado como asset. Nos próximos deploys, depois que os secrets já existirem no Worker, use `npm run deploy:cloudflare`.
 
-Ao conectar o repositÃ³rio ao Workers Builds, use:
+Ao conectar o repositório ao Workers Builds, use:
 
 ```text
 Build command:  npm run build:vinext
@@ -90,9 +90,9 @@ Deploy command: npm run deploy:vinext
 Root directory: /
 ```
 
-Cadastre `DATABASE_URL`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` e `CLOUDINARY_FOLDER_NAME` nos secrets do Worker. Se as migrations forem executadas no pipeline, cadastre `DATABASE_URL` tambÃ©m como secret do ambiente de build e rode `npm run db:deploy` antes do build de produÃ§Ã£o.
+Cadastre `DATABASE_URL`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` e `CLOUDINARY_FOLDER_NAME` nos secrets do Worker. A instalação das dependências e o `prisma generate` não precisam acessar o banco. Se as migrations forem executadas no pipeline, cadastre `DATABASE_URL` também como secret do ambiente de build e rode `npm run db:deploy` antes do build de produção.
 
-O acesso atual ao Neon usa `pg`/Prisma por TCP com `nodejs_compat`. Para um volume maior, o Hyperdrive pode ser acrescentado depois como camada de pooling regional, sem ser necessÃ¡rio para o primeiro deploy.
+O acesso atual ao Neon usa `pg`/Prisma por TCP com `nodejs_compat`. Para um volume maior, o Hyperdrive pode ser acrescentado depois como camada de pooling regional, sem ser necessário para o primeiro deploy.
 
 ## Organização
 

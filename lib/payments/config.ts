@@ -18,8 +18,15 @@ export function getPaymentConfig() {
   const collectorId = process.env.MERCADO_PAGO_COLLECTOR_ID?.trim();
   const mode = process.env.MERCADO_PAGO_LIVE_MODE;
   const allocationBasis = process.env.ANIMAL_CAUSE_ALLOCATION_BASIS ?? "GROSS_AFTER_REFUNDS";
-  if (!accessToken || !webhookSecret || !collectorId || !/^\d+$/.test(collectorId) || !["true", "false"].includes(mode ?? "")) {
-    throw new PaymentError("O Pix está temporariamente indisponível. Tente novamente mais tarde.", 503, "PAYMENT_CONFIGURATION");
+  const missing = [
+    !accessToken && "MERCADO_PAGO_ACCESS_TOKEN",
+    !webhookSecret && "MERCADO_PAGO_WEBHOOK_SECRET",
+    (!collectorId || !/^\d+$/.test(collectorId)) && "MERCADO_PAGO_COLLECTOR_ID",
+    !["true", "false"].includes(mode ?? "") && "MERCADO_PAGO_LIVE_MODE",
+  ].filter(Boolean);
+  if (missing.length || !accessToken || !webhookSecret || !collectorId || !mode) {
+    console.error(`[payments] Configuração incompleta: ${missing.join(", ")}`);
+    throw new PaymentError("O pagamento Pix ainda não está configurado corretamente. Tente novamente mais tarde.", 503, "PAYMENT_CONFIGURATION");
   }
   if (allocationBasis !== "GROSS_AFTER_REFUNDS" && allocationBasis !== "NET_AFTER_FEES") {
     throw new PaymentError("O Pix está temporariamente indisponível.", 503, "ALLOCATION_CONFIGURATION");

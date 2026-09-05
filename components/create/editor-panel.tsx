@@ -43,7 +43,10 @@ type EditorPanelProps = {
   publishError: string;
   publishedLetter: CreateLetterResponse | null;
   isPremium: boolean;
+  premiumPaid: boolean;
+  premiumSelected: boolean;
   onUpgrade: (reason?: "quiz" | "photos" | "all", pendingPhotos?: GalleryPhoto[]) => void;
+  onCheckout: () => void;
 };
 
 export function EditorPanel({
@@ -57,7 +60,10 @@ export function EditorPanel({
   publishError,
   publishedLetter,
   isPremium,
+  premiumPaid,
+  premiumSelected,
   onUpgrade,
+  onCheckout,
 }: EditorPanelProps) {
   const details = stepDetails[currentStep];
 
@@ -86,7 +92,7 @@ export function EditorPanel({
       <div key={currentStep} className="reveal px-5 py-7 sm:px-8 sm:py-9">
         {currentStep === 0 ? <StoryStep draft={draft} onChange={onDraftChange} /> : null}
         {currentStep === 1 ? <PhotosStep draft={draft} onChange={onDraftChange} isPremium={isPremium} onUpgrade={(photos) => onUpgrade("photos", photos)} /> : null}
-        {currentStep === 2 ? <><DetailsStep draft={draft} onChange={onDraftChange} /><QuizEditor draft={draft} onChange={onDraftChange} isPremium={isPremium} onUpgrade={() => onUpgrade("quiz")} /></> : null}
+        {currentStep === 2 ? <><DetailsStep draft={draft} onChange={onDraftChange} /><QuizEditor draft={draft} onChange={onDraftChange} isPremium={isPremium} premiumPaid={premiumPaid} onUpgrade={() => onUpgrade("quiz")} /></> : null}
         {currentStep === 3 ? (
           <ReviewStep
             draft={draft}
@@ -95,8 +101,9 @@ export function EditorPanel({
             isPublishing={isPublishing}
             publishError={publishError}
             publishedLetter={publishedLetter}
-            isPremium={isPremium}
-            onUpgrade={() => onUpgrade("all")}
+            premiumPaid={premiumPaid}
+            premiumSelected={premiumSelected}
+            onCheckout={onCheckout}
           />
         ) : null}
       </div>

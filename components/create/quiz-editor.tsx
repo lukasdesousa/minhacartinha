@@ -6,10 +6,11 @@ import { PremiumBadge } from "@/components/create/premium-badge";
 import { MAX_QUIZ_QUESTIONS, type QuizQuestion } from "@/lib/letters/quiz";
 import { PREMIUM_PRICE_LABEL } from "@/lib/premium";
 
-export function QuizEditor({ draft, onChange, isPremium, onUpgrade }: {
+export function QuizEditor({ draft, onChange, isPremium, premiumPaid, onUpgrade }: {
   draft: LetterDraft;
   onChange: (patch: Partial<LetterDraft>) => void;
   isPremium: boolean;
+  premiumPaid: boolean;
   onUpgrade: () => void;
 }) {
   function update(id: string, patch: Partial<QuizQuestion>) {
@@ -28,10 +29,14 @@ export function QuizEditor({ draft, onChange, isPremium, onUpgrade }: {
     <section className="mt-9 border-t border-[#eee5e7] pt-8" aria-labelledby="quiz-editor-title">
       <div className="flex flex-wrap items-center gap-3">
         <h3 id="quiz-editor-title" className="font-serif text-2xl font-semibold text-[#4e2230]">Quiz do casal</h3>
-        <PremiumBadge unlocked={isPremium} />
+        <PremiumBadge unlocked={premiumPaid} selected={isPremium && !premiumPaid} />
       </div>
       <p className="mt-2 text-sm leading-6 text-[#897078]">Transforme suas lembranças em perguntas: quatro alternativas, uma resposta certa e mais um jeito de sorrir juntos.</p>
-      {!isPremium && <p className="mt-3 text-xs leading-5 text-[#8c6774]">Prepare e experimente o Quiz à vontade. Para publicá-lo, desbloqueie todos os recursos Premium desta cartinha por {PREMIUM_PRICE_LABEL}. Compra única, sem assinatura.</p>}
+      {!isPremium ? <div className="mt-5 rounded-2xl border border-[#e4d3d9] bg-[#fff8fa] p-5">
+        <p className="text-sm leading-6 text-[#754f5e]">O Quiz faz parte do Premium. Escolha o plano agora, monte suas perguntas e pague somente na revisão final.</p>
+        <button type="button" onClick={onUpgrade} className="mt-4 min-h-11 rounded-full bg-[#8e2f4b] px-5 text-xs font-bold text-white hover:bg-[#76243d]">Escolher Premium — {PREMIUM_PRICE_LABEL}</button>
+      </div> : <>
+      {!premiumPaid && <p className="mt-3 text-xs leading-5 text-[#8c6774]">Premium escolhido. Prepare o Quiz à vontade; o Pix será gerado somente na revisão final.</p>}
       <label className="mt-5 flex min-h-12 cursor-pointer items-center gap-3 rounded-2xl border border-[#e4d3d9] bg-[#fff8fa] p-4 text-sm font-semibold text-[#633345]">
         <input type="checkbox" checked={draft.quizEnabled} onChange={(event) => {
           const enabled = event.target.checked;
@@ -58,8 +63,8 @@ export function QuizEditor({ draft, onChange, isPremium, onUpgrade }: {
           </div>
         </fieldset>)}
         <button type="button" className={smallButton} disabled={draft.quiz.length >= MAX_QUIZ_QUESTIONS} onClick={addQuestion}>+ Adicionar pergunta</button>
-        {!isPremium && <button type="button" onClick={onUpgrade} className="block min-h-12 w-full rounded-full bg-[#8e2f4b] px-5 text-sm font-bold text-white hover:bg-[#76243d]">Desbloquear Premium — {PREMIUM_PRICE_LABEL}</button>}
       </div>}
+      </>}
     </section>
   );
 }

@@ -13,8 +13,9 @@ import { EyeIcon, SparklesIcon } from "@/components/ui/icons";
 import { PremiumCheckout } from "@/components/create/premium-checkout";
 import { PremiumBadge } from "@/components/create/premium-badge";
 import { PublishedSuccess } from "@/components/create/published-success";
+import { PlanChoice } from "@/components/create/plan-choice";
 import { readSavedDraft, saveDraft, type SavedDraft } from "@/components/create/draft-storage";
-import { FREE_GALLERY_LIMIT, MAX_GALLERY_PHOTOS, PREMIUM_PRICE_LABEL, type PremiumStatus } from "@/lib/premium";
+import { FREE_GALLERY_LIMIT, MAX_GALLERY_PHOTOS, PREMIUM_PRICE_LABEL, type CreationPlan, type PremiumStatus } from "@/lib/premium";
 import { getQuizError } from "@/lib/letters/quiz";
 
 function newIdentity() {
@@ -42,6 +43,9 @@ export function CreatorWorkspace() {
   const [identity, setIdentity] = useState<{ requestKey: string; ownerToken: string } | null>(null);
   const [letterId, setLetterId] = useState<string | null>(null);
   const [premiumStatus, setPremiumStatus] = useState<PremiumStatus>("FREE");
+  const [selectedPlan, setSelectedPlan] = useState<CreationPlan | null>(null);
+  const [isRestoring, setIsRestoring] = useState(true);
+  const [planNotice, setPlanNotice] = useState("");
   const [upgradeReason, setUpgradeReason] = useState<"quiz" | "photos" | "all">("all");
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [storageError, setStorageError] = useState("");
@@ -49,9 +53,11 @@ export function CreatorWorkspace() {
   const pendingGalleryRef = useRef<GalleryPhoto[]>([]);
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const isPremium = premiumStatus === "PREMIUM";
+  const premiumFeaturesEnabled = selectedPlan === "PREMIUM" || isPremium;
 
   const onPremiumStatus = useCallback((status: PremiumStatus) => {
     setPremiumStatus(status);
+    if (status === "PREMIUM" || status === "PAYMENT_PENDING") setSelectedPlan("PREMIUM");
     if (status === "PREMIUM" && pendingGalleryRef.current.length) {
       const photos = pendingGalleryRef.current;
       pendingGalleryRef.current = [];
@@ -67,6 +73,10 @@ export function CreatorWorkspace() {
         const saved = await readSavedDraft();
         if (!active) return;
         if (saved && /^[a-f0-9]{64}$/.test(saved.ownerToken) && saved.requestKey && saved.draft) {
+          // Drafts saved before plan selection was introduced ask once on their
+          // next visit, while preserving every field already filled in.
+          const restoredPlan = saved.selectedPlan ?? null;
+          setSelectedPlan(restoredPlan);
           setIdentity({ requestKey: saved.requestKey, ownerToken: saved.ownerToken });
           setDraft({ ...initialLetterDraft, ...saved.draft });
           setLetterId(saved.letterId);
@@ -91,6 +101,8 @@ export function CreatorWorkspace() {
           setIdentity((current) => current ?? newIdentity());
           setStorageError("Não conseguimos recuperar ou verificar seu rascunho agora. Mantenha esta aba aberta enquanto edita.");
         }
+      } finally {
+        if (active) setIsRestoring(false);
       }
     }
     void restore();
@@ -104,26 +116,55 @@ export function CreatorWorkspace() {
   }, []);
 
   useEffect(() => {
-    if (!identity) return;
+    if (!identity || !selectedPlan) return;
     const timer = setTimeout(() => {
-      void persist({ draft, ...identity, letterId, publishedLetter, pendingGallery })
+      void persist({ draft, ...identity, letterId, publishedLetter, pendingGallery, selectedPlan })
         .then(() => setStorageError(""))
         .catch(() => setStorageError("Não conseguimos salvar neste dispositivo. Libere espaço no navegador para preservar sua edição antes de pagar."));
     }, 250);
     return () => clearTimeout(timer);
-  }, [draft, identity, letterId, pendingGallery, publishedLetter, persist]);
+  }, [draft, identity, letterId, pendingGallery, publishedLetter, selectedPlan, persist]);
 
   const updateDraft = useCallback((patch: Partial<LetterDraft>) => {
     setDraft((current) => ({ ...current, ...patch }));
     setPublishError("");
   }, []);
 
-  const openUpgrade = useCallback((reason: "quiz" | "photos" | "all" = "all", photos?: GalleryPhoto[]) => {
+  const choosePlan = useCallback((plan: CreationPlan, photos?: GalleryPhoto[]) => {
+    setSelectedPlan(plan);
+    setPlanNotice(plan === "PREMIUM"
+      ? `Premium escolhido. O Pix de ${PREMIUM_PRICE_LABEL} será gerado somente na revisão final.`
+      : "Plano Grátis escolhido. Você pode publicar com até 2 fotos no carrossel.");
+    if (plan === "PREMIUM") {
+      const restored = photos?.length ? photos : pendingGalleryRef.current;
+      if (restored.length) {
+        pendingGalleryRef.current = [];
+        setPendingGallery([]);
+        setDraft((current) => ({ ...current, gallery: [...current.gallery, ...restored].slice(0, MAX_GALLERY_PHOTOS) }));
+      }
+      return;
+    }
+    setDraft((current) => {
+      const excess = current.gallery.slice(FREE_GALLERY_LIMIT);
+      if (excess.length) {
+        pendingGalleryRef.current = excess;
+        setPendingGallery(excess);
+      }
+      return { ...current, gallery: current.gallery.slice(0, FREE_GALLERY_LIMIT), quizEnabled: false };
+    });
+  }, []);
+
+  const choosePremiumFromFeature = useCallback((reason: "quiz" | "photos" | "all" = "all", photos?: GalleryPhoto[]) => {
     if (photos?.length) {
       pendingGalleryRef.current = photos;
       setPendingGallery(photos);
     }
     setUpgradeReason(reason);
+    choosePlan("PREMIUM", photos);
+  }, [choosePlan]);
+
+  const openFinalCheckout = useCallback(() => {
+    setUpgradeReason("all");
     setCheckoutOpen(true);
   }, []);
   const closeCheckout = useCallback(() => setCheckoutOpen(false), []);
@@ -131,7 +172,7 @@ export function CreatorWorkspace() {
   async function ensureDraft() {
     if (!identity) throw new Error("Seu rascunho está sendo preparado. Aguarde um instante.");
     // Persist the capability before any payment can be created; reload must recover the same purchase.
-    await persist({ draft, ...identity, letterId, publishedLetter, pendingGallery });
+    await persist({ draft, ...identity, letterId, publishedLetter, pendingGallery, selectedPlan: selectedPlan ?? "FREE" });
     const response = await fetch("/api/letters/draft", {
       method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${identity.ownerToken}` },
       body: JSON.stringify({ requestKey: identity.requestKey, draft: publicationPayload(draft) }),
@@ -140,7 +181,7 @@ export function CreatorWorkspace() {
     if (!response.ok) throw new Error(result.error || "Não foi possível salvar sua cartinha. Tente novamente.");
     setLetterId(result.id);
     onPremiumStatus(result.premiumStatus);
-    await persist({ draft, ...identity, letterId: result.id, publishedLetter, pendingGallery });
+    await persist({ draft, ...identity, letterId: result.id, publishedLetter, pendingGallery, selectedPlan: selectedPlan ?? "FREE" });
     return result.id as string;
   }
 
@@ -149,6 +190,8 @@ export function CreatorWorkspace() {
     setDraft(initialLetterDraft);
     setLetterId(null);
     setPremiumStatus("FREE");
+    setSelectedPlan(null);
+    setPlanNotice("");
     setPublishedLetter(null);
     setPublishError("");
     pendingGalleryRef.current = [];
@@ -168,7 +211,11 @@ export function CreatorWorkspace() {
   async function publishLetter() {
     if (publishingRef.current || !identity) return;
     if (draft.quizEnabled && getQuizError(draft.quiz)) { setPublishError(getQuizError(draft.quiz)); return; }
-    if (!isPremium && (draft.quizEnabled || draft.gallery.length > FREE_GALLERY_LIMIT)) { openUpgrade(); return; }
+    if (selectedPlan === "PREMIUM" && !isPremium) { openFinalCheckout(); return; }
+    if (!isPremium && (draft.quizEnabled || draft.gallery.length > FREE_GALLERY_LIMIT)) {
+      setPublishError("Esta cartinha usa recursos Premium. Escolha o Premium para continuar.");
+      return;
+    }
 
     publishingRef.current = true;
     setIsPublishing(true);
@@ -193,7 +240,7 @@ export function CreatorWorkspace() {
       }
 
       setPublishedLetter(result);
-      await persist({ draft, ...identity, letterId: savedId, publishedLetter: result, pendingGallery });
+      await persist({ draft, ...identity, letterId: savedId, publishedLetter: result, pendingGallery, selectedPlan: selectedPlan ?? "FREE" });
     } catch (error) {
       setPublishError(
         error instanceof Error
@@ -204,6 +251,14 @@ export function CreatorWorkspace() {
       publishingRef.current = false;
       setIsPublishing(false);
     }
+  }
+
+  if (isRestoring || !identity) {
+    return <div className="grid min-h-screen place-items-center bg-[#f7f2f0] text-sm text-[#806871]" role="status">Preparando seu ateliê...</div>;
+  }
+
+  if (!selectedPlan) {
+    return <PlanChoice onChoose={(plan) => choosePlan(plan)} hasDraft={draft !== initialLetterDraft && Boolean(draft.message.trim())} />;
   }
 
   return (
@@ -227,14 +282,16 @@ export function CreatorWorkspace() {
                 </h1>
               </div>
               <p className="max-w-md text-sm leading-6 text-[#806871] md:text-right">
-                Comece grátis. Premium por {PREMIUM_PRICE_LABEL}, uma única vez por cartinha. Sua edição fica salva neste dispositivo; enviamos seu rascunho ao preparar a compra ou publicar.
+                Você escolheu {selectedPlan === "PREMIUM" ? `Premium por ${PREMIUM_PRICE_LABEL}` : "o plano Grátis"}. Sua edição fica salva neste dispositivo.
               </p>
             </div>
 
             <StepNavigation currentStep={currentStep} onChange={changeStep} />
             <div className="mt-5 flex flex-wrap items-center gap-3 text-xs text-[#906b7c]">
-              {isPremium ? <PremiumBadge unlocked /> : <><span>Grátis · até 2 fotos, link e QR Code</span>{!publishedLetter && <button type="button" disabled={!identity} onClick={() => openUpgrade()} className="min-h-10 rounded-full border border-[#d9bfc9] bg-white/70 px-4 font-semibold text-[#84465d]">{premiumStatus === "PAYMENT_PENDING" ? "Ver meu Pix" : `Premium — ${PREMIUM_PRICE_LABEL}`}</button>}</>}
+              {isPremium ? <PremiumBadge unlocked /> : selectedPlan === "PREMIUM" ? <><PremiumBadge selected /><span>Pagamento somente na revisão final</span></> : <span>Grátis · até 2 fotos, link e QR Code</span>}
+              {!publishedLetter && premiumStatus === "FREE" ? <button type="button" onClick={() => setSelectedPlan(null)} className="min-h-10 rounded-full border border-[#d9bfc9] bg-white/70 px-4 font-semibold text-[#84465d]">Trocar plano</button> : null}
             </div>
+            {planNotice ? <p className="mt-3 text-xs leading-5 text-[#806270]" role="status">{planNotice}</p> : null}
             {storageError && <p className="mt-3 text-xs leading-5 text-[#a04e65]" role="status">{storageError}</p>}
             {!identity && <p className="mt-3 text-sm text-[#8a6978]" role="status">Preparando seu rascunho...</p>}
           </div>
@@ -250,8 +307,11 @@ export function CreatorWorkspace() {
               isPublishing={isPublishing}
               publishError={publishError}
               publishedLetter={publishedLetter}
-              isPremium={isPremium}
-              onUpgrade={openUpgrade}
+              isPremium={premiumFeaturesEnabled}
+              premiumPaid={isPremium}
+              premiumSelected={selectedPlan === "PREMIUM"}
+              onUpgrade={choosePremiumFromFeature}
+              onCheckout={openFinalCheckout}
             /></fieldset>}
 
             <aside className="sticky top-[96px] hidden xl:block" aria-label="Prévia em tempo real">

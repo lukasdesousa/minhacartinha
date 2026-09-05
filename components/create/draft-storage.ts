@@ -1,5 +1,6 @@
 import type { GalleryPhoto, LetterDraft } from "@/components/create/types";
 import type { CreateLetterResponse } from "@/lib/letters/contracts";
+import type { CreationPlan } from "@/lib/premium";
 
 export type SavedDraft = {
   draft: LetterDraft;
@@ -8,6 +9,7 @@ export type SavedDraft = {
   letterId: string | null;
   publishedLetter: CreateLetterResponse | null;
   pendingGallery: GalleryPhoto[];
+  selectedPlan?: CreationPlan;
 };
 
 function openDraftDatabase() {

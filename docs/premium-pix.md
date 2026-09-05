@@ -6,6 +6,8 @@ O Grátis mantém mensagem, nomes, data especial, até 2 fotos no carrossel, lin
 
 O Premium custa **R$ 7,90 por cartinha, uma única vez, sem assinatura**, e libera Quiz do casal e até 6 fotos no carrossel juntos. O teto de 6 preserva o limite técnico de imagens que já existia. `lib/premium.ts` define `PREMIUM_PRICE_CENTS = 790`; `lib/payments/mercado-pago.ts` usa esse valor no servidor. Nenhum preço, status ou flag de compra enviado pelo navegador autoriza publicação.
 
+Ao entrar em `/criar`, o usuário escolhe Grátis ou Premium antes de abrir o formulário. A escolha organiza o editor e não representa pagamento. Quem escolhe Premium pode preparar Quiz e fotos, mas a criação da cobrança e do QR Code Pix só fica disponível na etapa final de revisão. A publicação e o envio da cartinha acontecem depois da confirmação do pagamento.
+
 O criador guarda a edição, fotos, perguntas e um token aleatório de 256 bits no IndexedDB. Ao preparar a compra ou publicar, `/api/letters/draft` salva um rascunho privado no banco. Só o hash SHA-256 do token é armazenado como credencial no servidor. O link público da cartinha não concede acesso de edição nem acesso ao Pix. O token é enviado como Bearer em cada operação privada; não aparece em query string, links ou logs.
 
 O token continua vinculado à mesma cartinha durante a edição. Não limpar os dados do navegador antes de concluir: o produto continua sem cadastro e não oferece recuperação em outro dispositivo. O IndexedDB preserva a edição, mas nunca serve como prova de pagamento. Depois da publicação, o criador oferece o link pronto e a opção de criar outra cartinha, com identidade e compra independentes.

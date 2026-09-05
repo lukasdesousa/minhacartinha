@@ -31,16 +31,15 @@ async function mockCheckout(page: Page) {
 test("terceira foto convida ao Premium e preserva fotos no celular", async ({ page }) => {
   await mockCheckout(page);
   await page.goto("/criar");
+  await expect(page.getByRole("heading", { name: "Como você quer criar sua cartinha?" })).toBeVisible();
+  await page.screenshot({ path: "test-results/escolha-plano-mobile.png", fullPage: true });
+  await page.getByRole("button", { name: "Criar cartinha grátis" }).click();
   await page.getByRole("navigation", { name: "Etapas de criação" }).getByRole("button", { name: /Fotos/ }).click();
   const galleryInput = page.locator('input[type="file"][multiple]');
   await galleryInput.setInputFiles([1, 2, 3].map((n) => ({ name: `momento-${n}.png`, mimeType: "image/png", buffer: Buffer.from(png, "base64") })));
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole("heading", { name: /Quer adicionar mais momentos/ })).toBeVisible();
-  await expect(dialog.getByText("Compra única para esta cartinha. Sem assinatura.")).toBeVisible();
-  await dialog.getByRole("button", { name: "Continuar editando", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Remover foto 2", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Remover foto 3", exact: true })).toHaveCount(0);
+  await expect(page.getByText("Premium escolhido. O Pix de R$ 7,90 será gerado somente na revisão final.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Remover foto 3", exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.screenshot({ path: "test-results/fotos-mobile.png", fullPage: true });
 });
 
@@ -48,6 +47,7 @@ test("Quiz mantém edição durante Pix e após recarregar; confirmação libera
   const checkout = await mockCheckout(page);
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto("/criar");
+  await page.getByRole("button", { name: "Criar cartinha Premium" }).click();
   await page.getByLabel("E-mail para entregar a cartinha").fill("amor@example.test");
   await page.getByRole("navigation", { name: "Etapas de criação" }).getByRole("button", { name: /Estilo/ }).click();
   await page.getByLabel("Incluir Quiz nesta cartinha").check();
@@ -56,7 +56,9 @@ test("Quiz mantém edição durante Pix e após recarregar; confirmação libera
     await page.getByRole("textbox", { name: `Alternativa ${String.fromCharCode(65 + index)} da pergunta 1`, exact: true }).fill(option);
   }
   await page.getByRole("radio", { name: "Alternativa C é a correta da pergunta 1" }).check();
-  await page.getByRole("button", { name: "Desbloquear Premium — R$ 7,90", exact: true }).click();
+  expect(checkout.creates()).toBe(0);
+  await page.getByRole("navigation", { name: "Etapas de criação" }).getByRole("button", { name: /Revisar/ }).click();
+  await page.getByRole("button", { name: "Gerar Pix — R$ 7,90", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Seu e-mail para o pagamento").fill("pagador@example.test");
   await dialog.getByRole("button", { name: "Desbloquear Premium — R$ 7,90", exact: true }).dblclick();
@@ -67,12 +69,15 @@ test("Quiz mantém edição durante Pix e após recarregar; confirmação libera
   expect(checkout.creates()).toBe(1);
   await page.screenshot({ path: "test-results/pix-mobile.png" });
   await dialog.getByRole("button", { name: "Continuar editando", exact: true }).click();
+  await page.getByRole("navigation", { name: "Etapas de criação" }).getByRole("button", { name: /Estilo/ }).click();
   await expect(page.getByLabel("Sua pergunta", { exact: true })).toHaveValue("Onde nos conhecemos?");
   await page.reload();
+  await expect(page.getByRole("heading", { name: "Como você quer criar sua cartinha?" })).toHaveCount(0);
   await page.getByRole("navigation", { name: "Etapas de criação" }).getByRole("button", { name: /Estilo/ }).click();
   await expect(page.getByLabel("Sua pergunta", { exact: true })).toHaveValue("Onde nos conhecemos?");
   checkout.approve();
-  await page.getByRole("button", { name: "Desbloquear Premium — R$ 7,90", exact: true }).click();
+  await page.getByRole("navigation", { name: "Etapas de criação" }).getByRole("button", { name: /Revisar/ }).click();
+  await page.getByRole("button", { name: "Gerar Pix — R$ 7,90", exact: true }).click();
   await expect(dialog.getByRole("heading", { name: "Premium desbloqueado!" })).toBeVisible();
   expect(checkout.creates()).toBe(1);
   await dialog.getByRole("button", { name: "Continuar minha cartinha" }).click();
@@ -100,6 +105,7 @@ for (const count of [0, 1, 2]) {
       await route.fulfill({ json: { id: "test-letter", slug: "test-letter", path: "/c/test-letter", publicUrl: "https://example.test/c/test-letter", qrCodeDataUrl: `data:image/png;base64,${png}`, emailStatus: "sent", emailMessage: "E-mail de teste simulado." } });
     });
     await page.goto("/criar");
+    await page.getByRole("button", { name: "Criar cartinha grátis" }).click();
     await page.getByLabel("E-mail para entregar a cartinha").fill("amor@example.test");
     if (count > 0) {
       await page.getByRole("navigation", { name: "Etapas de criação" }).getByRole("button", { name: /Fotos/ }).click();

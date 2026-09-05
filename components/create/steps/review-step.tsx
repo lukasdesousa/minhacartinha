@@ -4,7 +4,7 @@ import type { LetterDraft } from "@/components/create/types";
 import type { CreateLetterResponse } from "@/lib/letters/contracts";
 import { PublishedSuccess } from "@/components/create/published-success";
 import { PremiumBadge } from "@/components/create/premium-badge";
-import { FREE_GALLERY_LIMIT, PREMIUM_PRICE_LABEL } from "@/lib/premium";
+import { PREMIUM_PRICE_LABEL } from "@/lib/premium";
 import { getQuizError } from "@/lib/letters/quiz";
 import { getSpotifyTrackId } from "@/lib/spotify";
 import { ArrowIcon, CheckIcon, EyeIcon, LockIcon, PhotoIcon, SparklesIcon } from "@/components/ui/icons";
@@ -16,8 +16,9 @@ type ReviewStepProps = {
   isPublishing: boolean;
   publishError: string;
   publishedLetter: CreateLetterResponse | null;
-  isPremium: boolean;
-  onUpgrade: () => void;
+  premiumPaid: boolean;
+  premiumSelected: boolean;
+  onCheckout: () => void;
 };
 
 export function ReviewStep({
@@ -27,10 +28,11 @@ export function ReviewStep({
   isPublishing,
   publishError,
   publishedLetter,
-  isPremium,
-  onUpgrade,
+  premiumPaid,
+  premiumSelected,
+  onCheckout,
 }: ReviewStepProps) {
-  const needsPremium = !isPremium && (draft.quizEnabled || draft.gallery.length > FREE_GALLERY_LIMIT);
+  const needsPremiumPayment = premiumSelected && !premiumPaid;
   const quizError = draft.quizEnabled ? getQuizError(draft.quiz) : "";
   const checks = [
     { label: "Mensagem escrita", complete: Boolean(draft.message.trim()) },
@@ -57,9 +59,8 @@ export function ReviewStep({
   return (
     <div className="space-y-7">
       <div className="rounded-3xl border border-[#e2cdd5] bg-[#fff9fa] p-5">
-        <div className="flex items-center gap-3"><h3 className="font-serif text-2xl text-[#522434]">{isPremium ? "Sua cartinha Premium" : needsPremium ? "Uma cartinha com tudo de vocês" : "Sua cartinha grátis"}</h3>{(isPremium || needsPremium) && <PremiumBadge unlocked={isPremium} />}</div>
-        <p className="mt-2 text-xs leading-6 text-[#8b7079]">{isPremium ? "Quiz do casal e até 6 fotos liberados nesta cartinha. Nenhuma cobrança adicional por recurso." : needsPremium ? `Para publicar com Quiz ou mais de 2 fotos, desbloqueie todos os recursos Premium por ${PREMIUM_PRICE_LABEL}. Compra única por cartinha, sem assinatura.` : "Mensagem personalizada, nomes, data especial, até 2 fotos no carrossel, link exclusivo, QR Code e compartilhamento."}</p>
-        {needsPremium && <button type="button" onClick={onUpgrade} className="mt-4 min-h-12 rounded-full bg-[#8e2f4b] px-5 text-sm font-bold text-white">Desbloquear Premium — {PREMIUM_PRICE_LABEL}</button>}
+        <div className="flex items-center gap-3"><h3 className="font-serif text-2xl text-[#522434]">{premiumSelected ? "Sua cartinha Premium" : "Sua cartinha grátis"}</h3>{premiumSelected && <PremiumBadge unlocked={premiumPaid} selected={!premiumPaid} />}</div>
+        <p className="mt-2 text-xs leading-6 text-[#8b7079]">{premiumPaid ? "Pagamento confirmado. Quiz do casal e até 6 fotos estão liberados nesta cartinha." : premiumSelected ? `Sua cartinha está pronta para o pagamento único de ${PREMIUM_PRICE_LABEL}. O QR Code Pix será criado aqui, antes da publicação e do envio.` : "Mensagem personalizada, nomes, data especial, até 2 fotos no carrossel, link exclusivo, QR Code da cartinha e compartilhamento."}</p>
       </div>
       <div className="overflow-hidden rounded-3xl bg-[linear-gradient(145deg,#552032,#812d48)] p-6 text-white shadow-[0_20px_45px_rgba(70,25,40,0.16)] sm:p-8">
         <div className="flex items-center justify-between gap-4">
@@ -129,7 +130,7 @@ export function ReviewStep({
             </div>
             <button
               type="button"
-              onClick={() => void onPublish()}
+              onClick={() => needsPremiumPayment ? onCheckout() : void onPublish()}
               disabled={!canPublish || isPublishing}
               className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-[#8e2f4b] px-6 text-sm font-bold text-white shadow-[0_10px_25px_rgba(105,31,52,0.2)] transition-all hover:-translate-y-0.5 hover:bg-[#76243d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#963b57] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0"
             >
@@ -140,7 +141,7 @@ export function ReviewStep({
                 </>
               ) : (
                 <>
-                  {needsPremium ? `Desbloquear para publicar — ${PREMIUM_PRICE_LABEL}` : "Publicar e criar link"}
+                  {needsPremiumPayment ? `Gerar Pix — ${PREMIUM_PRICE_LABEL}` : "Publicar e criar link"}
                   <ArrowIcon className="size-4" aria-hidden="true" />
                 </>
               )}

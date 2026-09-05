@@ -1,8 +1,9 @@
 import { getCanonicalSpotifyUrl } from "@/lib/spotify";
+import { parseQuiz, type QuizQuestion } from "@/lib/letters/quiz";
+import { MAX_GALLERY_PHOTOS } from "@/lib/premium";
 
 const MAX_IMAGE_BYTES = 400_000;
 const MAX_TOTAL_IMAGE_BYTES = 3_200_000;
-const MAX_GALLERY_PHOTOS = 6;
 const acceptedMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 type ImageRole = "HERO" | "GALLERY" | "FAVORITE_PLACE";
@@ -17,6 +18,8 @@ export type ValidatedLetterImage = {
 };
 
 export type ValidatedLetterInput = {
+  quizEnabled: boolean;
+  quiz: QuizQuestion[];
   recipientName: string;
   recipientEmail: string;
   senderName: string;
@@ -249,7 +252,20 @@ export function parseLetterPayload(value: unknown): ValidatedLetterInput {
     throw new LetterValidationError("O conjunto de imagens ficou grande demais.");
   }
 
+  if (value.quizEnabled !== undefined && typeof value.quizEnabled !== "boolean") {
+    throw new LetterValidationError("A configuração do Quiz é inválida.");
+  }
+  const quizEnabled = value.quizEnabled === true;
+  let quiz: QuizQuestion[];
+  try {
+    quiz = parseQuiz(value.quiz ?? [], quizEnabled);
+  } catch (error) {
+    throw new LetterValidationError(error instanceof Error ? error.message : "O Quiz é inválido.");
+  }
+
   return {
+    quizEnabled,
+    quiz,
     recipientName: requiredText(value, "recipientName", "O nome de quem recebe", 40),
     recipientEmail: recipientEmailValue(value.recipientEmail),
     senderName: requiredText(value, "senderName", "Seu nome", 40),

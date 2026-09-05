@@ -31,7 +31,7 @@ export function Hero() {
           </h1>
 
           <p className="reveal reveal-delay-2 mx-auto mt-7 max-w-xl text-base leading-7 text-[#745b63] sm:text-lg sm:leading-8 lg:mx-0">
-            Crie grátis uma página personalizada com sua mensagem, fotos, música e a história de vocês. Depois, compartilhe a surpresa por link ou QR Code.
+            Crie grátis uma página personalizada com sua mensagem, até 2 fotos, música e a história de vocês. Depois, compartilhe a surpresa por link ou QR Code.
           </p>
 
           <div className="reveal reveal-delay-3 mt-9 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center lg:justify-start">

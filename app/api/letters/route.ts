@@ -4,6 +4,7 @@ import {
   LetterImageRole,
   LetterStatus,
   LetterTheme,
+  Prisma,
 } from "@/generated/prisma/client";
 import {
   removeCloudinaryImages,
@@ -19,14 +20,13 @@ import {
   deliverCreatedLetter,
   getExistingLetterResponse,
 } from "@/lib/letters/delivery";
-import { createLetterPublicId } from "@/lib/letters/public-id";
 import { getPublicLetterPath } from "@/lib/letters/public-url";
 import { withPrisma } from "@/lib/prisma";
+import { LetterAccessError, getOwnerToken, requireLetterOwner } from "@/lib/letters/ownership";
+import { readLetterJson, RequestBodyError, REQUEST_KEY_PATTERN } from "@/lib/letters/request";
+import { assertPublishEntitlement, needsPremium, PremiumRequiredError } from "@/lib/letters/entitlement";
 
 export const runtime = "nodejs";
-
-const MAX_REQUEST_BYTES = 4_400_000;
-const REQUEST_KEY_PATTERN = /^[A-Za-z0-9_-]{20,64}$/;
 
 const themeMap = {
   vinho: LetterTheme.ROMANCE,
@@ -43,15 +43,11 @@ const imageRoleMap = {
 export async function POST(request: Request) {
   const uploadedPublicIds: string[] = [];
   let letterWasCreated = false;
-  const contentLength = Number(request.headers.get("content-length") ?? 0);
-  if (contentLength > MAX_REQUEST_BYTES) {
-    return Response.json(
-      { error: "As imagens ultrapassaram o limite permitido para esta cartinha." },
-      { status: 413 },
-    );
-  }
+  let claimedLetterId: string | null = null;
+  const publicationClaim = randomUUID();
 
   try {
+    getOwnerToken(request);
     const requestKey = request.headers.get("Idempotency-Key")?.trim() ?? "";
     if (!REQUEST_KEY_PATTERN.test(requestKey)) {
       return Response.json(
@@ -60,21 +56,25 @@ export async function POST(request: Request) {
       );
     }
 
-    const existingLetter = await getExistingLetterResponse(requestKey, request.url);
-    if (existingLetter) {
-      return Response.json(existingLetter, { status: 200 });
+    const draft = await withPrisma((prisma) => prisma.letter.findUnique({ where: { requestKey } }));
+    if (!draft) throw new RequestBodyError("Salve o rascunho antes de publicar a cartinha.", 409);
+    requireLetterOwner(request, draft);
+    if (draft.status === LetterStatus.PUBLISHED) {
+      return Response.json(await getExistingLetterResponse(requestKey, request.url), { headers: { "Cache-Control": "private, no-store" } });
     }
-
-    const rawBody = await request.text();
-    if (Buffer.byteLength(rawBody, "utf8") > MAX_REQUEST_BYTES) {
-      return Response.json(
-        { error: "As imagens ultrapassaram o limite permitido para esta cartinha." },
-        { status: 413 },
-      );
-    }
-
-    const payload = parseLetterPayload(JSON.parse(rawBody));
-    const slug = createLetterPublicId();
+    const payload = parseLetterPayload(await readLetterJson(request));
+    const premiumFeatures = { quizEnabled: payload.quizEnabled, galleryCount: payload.images.filter((image) => image.role === "GALLERY").length };
+    assertPublishEntitlement(premiumFeatures, draft.premiumStatus);
+    const requiresPremium = needsPremium(premiumFeatures);
+    const claim = await withPrisma((prisma) => prisma.letter.updateMany({
+      where: {
+        id: draft.id, status: LetterStatus.DRAFT,
+        OR: [{ publicationClaim: null }, { publicationClaimedAt: { lt: new Date(Date.now() - 10 * 60_000) } }],
+      },
+      data: { publicationClaim, publicationClaimedAt: new Date() },
+    }));
+    if (!claim.count) throw new RequestBodyError("Esta cartinha está sendo publicada. Aguarde um instante e tente novamente.", 409);
+    claimedLetterId = draft.id;
     const uploadBatchId = randomUUID();
     const now = new Date();
     const uploadedImages: Array<{
@@ -88,11 +88,12 @@ export async function POST(request: Request) {
       uploadedImages.push({ image, uploaded });
     }
 
-    const letter = await withPrisma((prisma) =>
-      prisma.letter.create({
+    const letter = await withPrisma((prisma) => prisma.$transaction(async (tx) => {
+      // Compare entitlement again at commit: a concurrent refund must not let
+      // an unpaid Premium draft publish after image uploads complete.
+      const published = await tx.letter.updateMany({
+        where: { id: draft.id, status: LetterStatus.DRAFT, publicationClaim, ...(requiresPremium ? { premiumStatus: "PREMIUM" as const } : {}) },
         data: {
-          slug,
-          requestKey,
           recipientName: payload.recipientName,
           recipientEmail: payload.recipientEmail,
           senderName: payload.senderName,
@@ -110,9 +111,23 @@ export async function POST(request: Request) {
           theme: themeMap[payload.themeId],
           showRelationshipTime: payload.showRelationshipTime,
           showMusic: payload.showMusic,
+          quizEnabled: payload.quizEnabled,
+          quiz: payload.quiz,
+          draftData: Prisma.DbNull,
+          publicationClaim: null,
+          publicationClaimedAt: null,
           status: LetterStatus.PUBLISHED,
           publishedAt: now,
           emailStatus: EmailDeliveryStatus.PENDING,
+        },
+      });
+      if (!published.count) {
+        if (requiresPremium) throw new PremiumRequiredError();
+        throw new RequestBodyError("O estado da cartinha mudou. Tente publicar novamente.", 409);
+      }
+      return tx.letter.update({
+        where: { id: draft.id },
+        data: {
           images: {
             create: uploadedImages.map(({ image, uploaded }) => ({
               role: imageRoleMap[image.role],
@@ -132,8 +147,8 @@ export async function POST(request: Request) {
           id: true,
           slug: true,
         },
-      }),
-    );
+      });
+    }));
     letterWasCreated = true;
 
     try {
@@ -149,9 +164,9 @@ export async function POST(request: Request) {
       );
       return Response.json(delivery, { status: 201 });
     } catch (error) {
-      const reason = error instanceof Error ? error.message : "falha desconhecida";
+      void error;
       console.error(
-        `A cartinha ${letter.id} foi criada, mas a preparação da entrega falhou: ${reason}`,
+        `A cartinha ${letter.id} foi criada, mas a preparação da entrega falhou.`,
       );
       return Response.json(
         {
@@ -171,15 +186,8 @@ export async function POST(request: Request) {
       await removeCloudinaryImages(uploadedPublicIds);
     }
 
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      error.code === "P2002"
-    ) {
-      const requestKey = request.headers.get("Idempotency-Key")?.trim() ?? "";
-      const existingLetter = await getExistingLetterResponse(requestKey, request.url);
-      if (existingLetter) return Response.json(existingLetter, { status: 200 });
+    if (error instanceof LetterAccessError || error instanceof RequestBodyError || error instanceof PremiumRequiredError) {
+      return Response.json({ error: error.message }, { status: error.status });
     }
 
     if (error instanceof LetterValidationError) {
@@ -190,11 +198,17 @@ export async function POST(request: Request) {
       return Response.json({ error: "O conteúdo enviado é inválido." }, { status: 400 });
     }
 
-    const reason = error instanceof Error ? error.message : "falha desconhecida";
-    console.error(`Não foi possível criar a cartinha: ${reason}`);
+    console.error("[letter.publish] Não foi possível publicar a cartinha.");
     return Response.json(
       { error: "Não foi possível publicar a cartinha agora. Tente novamente." },
       { status: 500 },
     );
+  } finally {
+    if (claimedLetterId && !letterWasCreated) {
+      await withPrisma((prisma) => prisma.letter.updateMany({
+        where: { id: claimedLetterId!, publicationClaim },
+        data: { publicationClaim: null, publicationClaimedAt: null },
+      })).catch(() => console.error("[letter.publish] Falha ao liberar tentativa de publicação."));
+    }
   }
 }

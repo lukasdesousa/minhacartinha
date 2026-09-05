@@ -28,6 +28,12 @@ export function Navbar() {
           >
             Por que criar
           </a>
+          <a
+            className="text-sm font-medium text-[#745761] transition-colors hover:text-[#8e2f4b] focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#9d415b]"
+            href="#gratis-e-premium"
+          >
+            Grátis e Premium
+          </a>
         </div>
         <div className="hidden sm:block">
           <ButtonLink href="/criar">Criar cartinha grátis</ButtonLink>

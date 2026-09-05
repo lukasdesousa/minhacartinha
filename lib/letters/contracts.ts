@@ -1,3 +1,5 @@
+import type { QuizQuestion } from "@/lib/letters/quiz";
+
 export type CreateLetterResponse = {
   id: string;
   slug: string;
@@ -19,6 +21,8 @@ export type PublicGalleryPhoto = {
 };
 
 export type PublicLetterData = {
+  quizEnabled: boolean;
+  quiz: QuizQuestion[];
   slug: string;
   recipientName: string;
   senderName: string;

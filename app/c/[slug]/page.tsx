@@ -4,8 +4,11 @@ import { LetterImageRole, LetterTheme } from "@/generated/prisma/client";
 import { PublishedLetter } from "@/components/letter/published-letter";
 import type { PublicLetterData } from "@/lib/letters/contracts";
 import { getPublishedLetterBySlug } from "@/lib/letters/queries";
+import { parseQuiz } from "@/lib/letters/quiz";
+import { FREE_GALLERY_LIMIT } from "@/lib/premium";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Uma cartinha especial",
@@ -37,9 +40,15 @@ export default async function PublicLetterPage({ params }: PageProps<"/c/[slug]"
   const favoritePlaceImage = letter.images.find(
     (image) => image.role === LetterImageRole.FAVORITE_PLACE,
   );
-  const gallery = letter.images.filter((image) => image.role === LetterImageRole.GALLERY);
+  const allGallery = letter.images.filter((image) => image.role === LetterImageRole.GALLERY);
+  // Existing letters retain their original gallery without being marked as paid.
+  const gallery = letter.premiumStatus === "PREMIUM" || letter.premiumRulesVersion === 0
+    ? allGallery : allGallery.slice(0, FREE_GALLERY_LIMIT);
+  const quizEnabled = letter.premiumStatus === "PREMIUM" && letter.quizEnabled;
 
   const publicLetter: PublicLetterData = {
+    quizEnabled,
+    quiz: quizEnabled ? parseQuiz(letter.quiz ?? [], true) : [],
     slug: letter.slug,
     recipientName: letter.recipientName,
     senderName: letter.senderName,

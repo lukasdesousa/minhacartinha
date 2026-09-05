@@ -22,7 +22,9 @@
     "preview:cloudflare": "npm run build:vinext && npm run start:vinext",
     "deploy:cloudflare": "npm run build:vinext && npm run deploy:vinext",
     "deploy:cloudflare:dry": "npm run build:vinext && wrangler deploy --dry-run --config dist/server/wrangler.json",
-    "cf-typegen": "wrangler types"
+    "cf-typegen": "wrangler types",
+    "test": "tsx --test tests/*.test.ts scripts/lib/*.test.mjs",
+    "test:e2e": "playwright test"
   },
   "engines": {
     "node": ">=22.0.0"
@@ -33,6 +35,7 @@
     "@vinext/cloudflare": "^1.0.0-beta.7",
     "cloudinary": "^2.11.0",
     "dotenv": "^17.4.2",
+    "mercadopago": "3.6.0",
     "next": "16.3.4",
     "pg": "^8.23.0",
     "qrcode": "^1.5.4",
@@ -44,6 +47,8 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.54.4",
+    "@electric-sql/pglite": "^0.4.3",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.23.1",
@@ -56,6 +61,7 @@
     "eslint-config-next": "16.3.4",
     "prisma": "^7.10.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5",
     "vite": "^8.2.2",
     "wrangler": "^4.129.0"

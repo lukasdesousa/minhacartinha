@@ -1,6 +1,6 @@
 import "server-only";
 
-import { EmailDeliveryStatus } from "@/generated/prisma/client";
+import { EmailDeliveryStatus, LetterStatus } from "@/generated/prisma/client";
 import type { CreateLetterResponse } from "@/lib/letters/contracts";
 import { sendLetterReadyEmail } from "@/lib/email/send-letter-ready-email";
 import { generateLetterQrCode } from "@/lib/letters/qr-code";
@@ -129,7 +129,7 @@ export async function getExistingLetterResponse(
 ): Promise<CreateLetterResponse | null> {
   const letter = await withPrisma((prisma) =>
     prisma.letter.findUnique({
-      where: { requestKey },
+      where: { requestKey, status: LetterStatus.PUBLISHED },
       select: {
         id: true,
         slug: true,

@@ -1,5 +1,6 @@
 import type { FormEvent } from "react";
-import type { LetterDraft } from "@/components/create/types";
+import type { GalleryPhoto, LetterDraft } from "@/components/create/types";
+import { QuizEditor } from "@/components/create/quiz-editor";
 import type { CreateLetterResponse } from "@/lib/letters/contracts";
 import { DetailsStep } from "@/components/create/steps/details-step";
 import { PhotosStep } from "@/components/create/steps/photos-step";
@@ -41,6 +42,8 @@ type EditorPanelProps = {
   isPublishing: boolean;
   publishError: string;
   publishedLetter: CreateLetterResponse | null;
+  isPremium: boolean;
+  onUpgrade: (reason?: "quiz" | "photos" | "all", pendingPhotos?: GalleryPhoto[]) => void;
 };
 
 export function EditorPanel({
@@ -53,6 +56,8 @@ export function EditorPanel({
   isPublishing,
   publishError,
   publishedLetter,
+  isPremium,
+  onUpgrade,
 }: EditorPanelProps) {
   const details = stepDetails[currentStep];
 
@@ -80,8 +85,8 @@ export function EditorPanel({
 
       <div key={currentStep} className="reveal px-5 py-7 sm:px-8 sm:py-9">
         {currentStep === 0 ? <StoryStep draft={draft} onChange={onDraftChange} /> : null}
-        {currentStep === 1 ? <PhotosStep draft={draft} onChange={onDraftChange} /> : null}
-        {currentStep === 2 ? <DetailsStep draft={draft} onChange={onDraftChange} /> : null}
+        {currentStep === 1 ? <PhotosStep draft={draft} onChange={onDraftChange} isPremium={isPremium} onUpgrade={(photos) => onUpgrade("photos", photos)} /> : null}
+        {currentStep === 2 ? <><DetailsStep draft={draft} onChange={onDraftChange} /><QuizEditor draft={draft} onChange={onDraftChange} isPremium={isPremium} onUpgrade={() => onUpgrade("quiz")} /></> : null}
         {currentStep === 3 ? (
           <ReviewStep
             draft={draft}
@@ -90,6 +95,8 @@ export function EditorPanel({
             isPublishing={isPublishing}
             publishError={publishError}
             publishedLetter={publishedLetter}
+            isPremium={isPremium}
+            onUpgrade={() => onUpgrade("all")}
           />
         ) : null}
       </div>

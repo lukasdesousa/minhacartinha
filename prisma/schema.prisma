@@ -31,40 +31,140 @@ enum EmailDeliveryStatus {
   FAILED
 }
 
+enum PremiumStatus {
+  FREE
+  PAYMENT_PENDING
+  PREMIUM
+}
+
+enum PaymentStatus {
+  CREATING
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  EXPIRED
+  REFUNDED
+  CHARGED_BACK
+}
+
+enum AllocationBasis {
+  GROSS_AFTER_REFUNDS
+  NET_AFTER_FEES
+}
+
 model Letter {
-  id                    String        @id @default(cuid())
-  slug                  String        @unique @db.VarChar(100)
-  requestKey            String?       @unique @db.VarChar(64)
-  recipientName         String        @db.VarChar(40)
-  recipientEmail        String?       @db.VarChar(254)
-  senderName            String        @db.VarChar(40)
-  title                 String        @db.VarChar(70)
-  message               String        @db.Text
-  signature             String        @db.VarChar(60)
+  id                    String               @id @default(cuid())
+  slug                  String               @unique @db.VarChar(100)
+  requestKey            String?              @unique @db.VarChar(64)
+  ownerTokenHash        String?              @db.VarChar(64)
+  premiumStatus         PremiumStatus        @default(FREE)
+  premiumRulesVersion   Int                  @default(1)
+  quiz                  Json?
+  quizEnabled           Boolean              @default(false)
+  draftData             Json?
+  publicationClaim      String?              @db.VarChar(36)
+  publicationClaimedAt  DateTime?
+  recipientName         String               @db.VarChar(40)
+  recipientEmail        String?              @db.VarChar(254)
+  senderName            String               @db.VarChar(40)
+  title                 String               @db.VarChar(70)
+  message               String               @db.Text
+  signature             String               @db.VarChar(60)
   relationshipStartedAt DateTime?
-  openingText           String        @db.VarChar(70)
-  closingText           String        @db.VarChar(100)
-  favoritePlaceName     String?       @db.VarChar(60)
-  favoritePlaceCaption  String?       @db.VarChar(180)
-  songTitle             String?       @db.VarChar(60)
-  songArtist            String?       @db.VarChar(70)
-  spotifyUrl            String?       @db.VarChar(300)
-  theme                 LetterTheme   @default(ROMANCE)
-  showRelationshipTime  Boolean       @default(true)
-  showMusic             Boolean       @default(true)
-  status                LetterStatus  @default(DRAFT)
+  openingText           String               @db.VarChar(70)
+  closingText           String               @db.VarChar(100)
+  favoritePlaceName     String?              @db.VarChar(60)
+  favoritePlaceCaption  String?              @db.VarChar(180)
+  songTitle             String?              @db.VarChar(60)
+  songArtist            String?              @db.VarChar(70)
+  spotifyUrl            String?              @db.VarChar(300)
+  theme                 LetterTheme          @default(ROMANCE)
+  showRelationshipTime  Boolean              @default(true)
+  showMusic             Boolean              @default(true)
+  status                LetterStatus         @default(DRAFT)
   publishedAt           DateTime?
   emailStatus           EmailDeliveryStatus?
-  emailMessageId        String?       @db.VarChar(100)
+  emailMessageId        String?              @db.VarChar(100)
   emailSentAt           DateTime?
-  emailLastError        String?       @db.VarChar(500)
-  emailAttempts         Int           @default(0)
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
+  emailLastError        String?              @db.VarChar(500)
+  emailAttempts         Int                  @default(0)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
   images                LetterImage[]
+  payments              Payment[]
 
   @@index([status, createdAt])
   @@map("letters")
+}
+
+model Payment {
+  id                   String          @id @default(uuid()) @db.VarChar(36)
+  letterId             String
+  // Nullable unique key keeps one active attempt per letter, across servers.
+  activeLetterId       String?         @unique
+  externalReference    String          @unique @db.VarChar(64)
+  idempotencyKey       String          @unique @db.VarChar(36)
+  providerOrderId      String?         @unique @db.VarChar(64)
+  providerPaymentId    String?         @unique @db.VarChar(64)
+  providerReferenceId  String?         @unique @db.VarChar(64)
+  status               PaymentStatus   @default(CREATING)
+  providerStatus       String?         @db.VarChar(50)
+  providerStatusDetail String?         @db.VarChar(100)
+  amountCents          Int
+  refundedAmountCents  Int             @default(0)
+  feeCents             Int?
+  currency             String          @default("BRL") @db.VarChar(3)
+  liveMode             Boolean
+  payerEmail           String          @db.VarChar(254)
+  qrCode               String?         @db.Text
+  qrCodeBase64         String?         @db.Text
+  expiresAt            DateTime?
+  approvedAt           DateTime?
+  providerUpdatedAt    DateTime?
+  lastSyncedAt         DateTime?
+  syncClaimedAt        DateTime?
+  creationClaimedAt    DateTime?
+  lastErrorCode        String?         @db.VarChar(80)
+  // Snapshot: later accounting policy changes do not rewrite old purchases.
+  allocationBasis      AllocationBasis @default(GROSS_AFTER_REFUNDS)
+  allocationRateBps    Int             @default(1500)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  letter               Letter          @relation(fields: [letterId], references: [id], onDelete: Restrict)
+
+  @@index([letterId, createdAt])
+  @@index([status, liveMode, approvedAt])
+  @@map("payments")
+}
+
+model DonationInstitution {
+  id         String     @id @default(cuid())
+  name       String     @db.VarChar(160)
+  websiteUrl String?    @db.VarChar(600)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  donations  Donation[]
+
+  @@map("donation_institutions")
+}
+
+model Donation {
+  id                String              @id @default(cuid())
+  institutionId     String
+  amountCents       Int
+  donatedAt         DateTime
+  description       String              @db.VarChar(1000)
+  receiptUrl        String?             @db.VarChar(1000)
+  receiptReviewedAt DateTime?
+  publishedAt       DateTime?
+  note              String?             @db.VarChar(1000)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  institution       DonationInstitution @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+
+  @@index([publishedAt, donatedAt])
+  @@map("donations")
 }
 
 model LetterImage {

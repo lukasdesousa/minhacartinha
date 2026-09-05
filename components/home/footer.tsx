@@ -9,6 +9,12 @@ export function Footer() {
         <Brand />
         <div className="flex flex-col items-center gap-3 sm:items-end">
           <Link
+            href="/transparencia"
+            className="text-xs font-bold text-[#657050] underline-offset-4 hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#657050]"
+          >
+            Transparência e causa animal
+          </Link>
+          <Link
             href="/criar"
             className="text-xs font-bold text-[#873d54] underline-offset-4 hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#9d415b]"
           >

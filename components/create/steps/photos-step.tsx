@@ -1,4 +1,4 @@
-import type { LetterDraft } from "@/components/create/types";
+import type { GalleryPhoto, LetterDraft } from "@/components/create/types";
 import { FieldGroup, TextAreaField, TextField } from "@/components/create/form-controls";
 import { GalleryManager } from "@/components/create/gallery-manager";
 import { PhotoField } from "@/components/create/photo-field";
@@ -6,9 +6,11 @@ import { PhotoField } from "@/components/create/photo-field";
 type PhotosStepProps = {
   draft: LetterDraft;
   onChange: (patch: Partial<LetterDraft>) => void;
+  isPremium: boolean;
+  onUpgrade: (pendingPhotos?: GalleryPhoto[]) => void;
 };
 
-export function PhotosStep({ draft, onChange }: PhotosStepProps) {
+export function PhotosStep({ draft, onChange, isPremium, onUpgrade }: PhotosStepProps) {
   return (
     <div className="space-y-9">
       <FieldGroup
@@ -30,7 +32,7 @@ export function PhotosStep({ draft, onChange }: PhotosStepProps) {
         title="Pequenos capítulos"
         description="Monte um carrossel com os momentos que fazem vocês sorrirem só de lembrar."
       >
-        <GalleryManager photos={draft.gallery} onChange={(gallery) => onChange({ gallery })} />
+        <GalleryManager photos={draft.gallery} onChange={(gallery) => onChange({ gallery })} isPremium={isPremium} onUpgrade={onUpgrade} />
       </FieldGroup>
 
       <div className="h-px bg-[#eee5e7]" />

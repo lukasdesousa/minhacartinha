@@ -2,6 +2,10 @@
 
 Aplicação em Next.js para criar e compartilhar cartinhas digitais personalizadas. O editor permite escrever a história, adicionar fotos, escolher o tema e publicar uma página exclusiva.
 
+Grátis com até 2 fotos no carrossel. Premium por **R$ 7,90 em compra única por cartinha**, com Quiz do casal e até 6 fotos, pago por Pix dentro do site. A iniciativa da causa animal e os repasses comprovados ficam em `/transparencia`.
+
+Configuração e operação: [Premium, Pix e webhook](docs/premium-pix.md) e [cálculo dos 15% e cadastro de comprovantes](docs/transparency.md).
+
 ## Tecnologias
 
 - Next.js 16 com App Router
@@ -110,13 +114,13 @@ O acesso atual ao Neon usa `pg`/Prisma por TCP com `nodejs_compat`. Para um volu
 - `lib/letters`: contratos, validação, identificadores públicos e consultas
 - `prisma`: schema e histórico de migrations
 
-As imagens são otimizadas no navegador, validadas novamente no servidor e enviadas ao Cloudinary. O Neon guarda os dados da cartinha e apenas os identificadores, URLs e metadados dos arquivos.
+As imagens são otimizadas no navegador, validadas novamente no servidor e enviadas ao Cloudinary na publicação. Durante a compra, o rascunho privado conserva uma cópia da edição no banco, inclusive imagens; após publicar, essa cópia é removida e ficam os identificadores, URLs e metadados dos arquivos. O navegador também conserva a edição em IndexedDB.
 
 Links de música são normalizados no servidor e exibidos pelo Embed oficial do Spotify, sem necessidade de credenciais adicionais. A data de início do relacionamento é salva como data e hora e alimenta o contador dinâmico da experiência publicada.
 
 ## SEO e indexação
 
-A Home e `/criar` possuem metadata própria, canonical no domínio sem `www`, imagem Open Graph, Twitter Card e dados estruturados coerentes com o conteúdo visível. O sitemap contém somente essas duas páginas indexáveis. Cartinhas pessoais em `/c/[slug]` permanecem fora do sitemap e usam `noindex`, `noarchive`, `nosnippet`, `no-store` e `no-referrer`; elas não são bloqueadas no `robots.txt` para que os buscadores consigam ler a diretiva `noindex`.
+A Home, `/criar` e `/transparencia` possuem metadata própria, canonical e conteúdo público indexável, e estão no sitemap. Cartinhas pessoais em `/c/[slug]` permanecem fora do sitemap e usam `noindex`, `noarchive`, `nosnippet`, `no-store` e `no-referrer`; elas não são bloqueadas no `robots.txt` para que os buscadores consigam ler a diretiva `noindex`.
 
 Checklist externo após cada deploy de produção:
 

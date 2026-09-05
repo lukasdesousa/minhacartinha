@@ -5,29 +5,33 @@ import type { ChangeEvent } from "react";
 import type { GalleryPhoto } from "@/components/create/types";
 import { readImageFile } from "@/components/create/photo-field";
 import { PhotoIcon, TrashIcon } from "@/components/ui/icons";
-
-const MAX_PHOTOS = 6;
+import { FREE_GALLERY_LIMIT, MAX_GALLERY_PHOTOS } from "@/lib/premium";
+import { PremiumBadge } from "@/components/create/premium-badge";
 
 type GalleryManagerProps = {
   photos: GalleryPhoto[];
   onChange: (photos: GalleryPhoto[]) => void;
+  isPremium: boolean;
+  onUpgrade: (pendingPhotos?: GalleryPhoto[]) => void;
 };
 
-export function GalleryManager({ photos, onChange }: GalleryManagerProps) {
+export function GalleryManager({ photos, onChange, isPremium, onUpgrade }: GalleryManagerProps) {
   const inputId = useId();
   const [error, setError] = useState("");
+  const [reading, setReading] = useState(false);
 
   async function handleFiles(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
     event.target.value = "";
 
-    if (!files.length) return;
-    if (photos.length + files.length > MAX_PHOTOS) {
-      setError(`Escolha no máximo ${MAX_PHOTOS} fotos para o carrossel.`);
+    if (!files.length || reading) return;
+    if (photos.length + files.length > MAX_GALLERY_PHOTOS) {
+      setError(`Escolha no máximo ${MAX_GALLERY_PHOTOS} fotos para o carrossel Premium.`);
       return;
     }
 
     try {
+      setReading(true);
       setError("");
       const newPhotos = await Promise.all(
         files.map(async (file, index) => ({
@@ -36,9 +40,17 @@ export function GalleryManager({ photos, onChange }: GalleryManagerProps) {
           caption: `Momento ${photos.length + index + 1}`,
         })),
       );
-      onChange([...photos, ...newPhotos]);
+      const combined = [...photos, ...newPhotos];
+      if (!isPremium && combined.length > FREE_GALLERY_LIMIT) {
+        onChange(combined.slice(0, FREE_GALLERY_LIMIT));
+        onUpgrade(combined.slice(FREE_GALLERY_LIMIT));
+      } else {
+        onChange(combined);
+      }
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Uma das imagens é inválida.");
+    } finally {
+      setReading(false);
     }
   }
 
@@ -55,10 +67,10 @@ export function GalleryManager({ photos, onChange }: GalleryManagerProps) {
       <div className="mb-3 flex items-end justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-[#59303d]">Carrossel de momentos</p>
-          <p className="mt-1 text-xs leading-5 text-[#937b83]">Adicione até 6 fotos e uma legenda para cada memória.</p>
+          <p className="mt-1 text-xs leading-5 text-[#937b83]">Até 2 fotos grátis. Com Premium, até 6 fotos e todas as suas legendas.</p>
         </div>
         <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-[#a58d94]">
-          {photos.length}/{MAX_PHOTOS}
+          {photos.length}/{isPremium ? MAX_GALLERY_PHOTOS : FREE_GALLERY_LIMIT}
         </span>
       </div>
 
@@ -108,7 +120,9 @@ export function GalleryManager({ photos, onChange }: GalleryManagerProps) {
         </div>
       )}
 
-      {photos.length < MAX_PHOTOS ? (
+      {!isPremium && photos.length >= FREE_GALLERY_LIMIT ? (
+        <button type="button" onClick={() => onUpgrade()} className="mt-4 inline-flex min-h-12 items-center gap-3 rounded-full border border-[#d7c5ca] bg-white px-4 text-xs font-semibold text-[#713b4d] hover:bg-[#fff5f8]">+ Adicionar mais fotos <PremiumBadge /></button>
+      ) : photos.length < MAX_GALLERY_PHOTOS ? (
         <label
           htmlFor={inputId}
           className="mt-3 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-[#d7c5ca] bg-white px-4 text-xs font-semibold text-[#713b4d] transition-all hover:-translate-y-0.5 hover:border-[#b47b8c] focus-within:ring-4 focus-within:ring-[#ead9de]/70"
@@ -119,10 +133,11 @@ export function GalleryManager({ photos, onChange }: GalleryManagerProps) {
             accept="image/jpeg,image/png,image/webp"
             multiple
             onChange={handleFiles}
+            disabled={reading}
             className="sr-only"
           />
           <span className="text-base leading-none" aria-hidden="true">+</span>
-          Adicionar {photos.length ? "mais fotos" : "fotos"}
+          {reading ? "Preparando fotos..." : `Adicionar ${photos.length ? "mais fotos" : "fotos"}`}
         </label>
       ) : null}
       {error ? <p className="mt-2 text-xs font-medium text-[#a6374d]">{error}</p> : null}

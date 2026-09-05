@@ -3,6 +3,9 @@
 import type { LetterDraft } from "@/components/create/types";
 import type { CreateLetterResponse } from "@/lib/letters/contracts";
 import { PublishedSuccess } from "@/components/create/published-success";
+import { PremiumBadge } from "@/components/create/premium-badge";
+import { FREE_GALLERY_LIMIT, PREMIUM_PRICE_LABEL } from "@/lib/premium";
+import { getQuizError } from "@/lib/letters/quiz";
 import { getSpotifyTrackId } from "@/lib/spotify";
 import { ArrowIcon, CheckIcon, EyeIcon, LockIcon, PhotoIcon, SparklesIcon } from "@/components/ui/icons";
 
@@ -13,6 +16,8 @@ type ReviewStepProps = {
   isPublishing: boolean;
   publishError: string;
   publishedLetter: CreateLetterResponse | null;
+  isPremium: boolean;
+  onUpgrade: () => void;
 };
 
 export function ReviewStep({
@@ -22,7 +27,11 @@ export function ReviewStep({
   isPublishing,
   publishError,
   publishedLetter,
+  isPremium,
+  onUpgrade,
 }: ReviewStepProps) {
+  const needsPremium = !isPremium && (draft.quizEnabled || draft.gallery.length > FREE_GALLERY_LIMIT);
+  const quizError = draft.quizEnabled ? getQuizError(draft.quiz) : "";
   const checks = [
     { label: "Mensagem escrita", complete: Boolean(draft.message.trim()) },
     { label: "E-mail para entrega", complete: Boolean(draft.recipientEmail.trim()) },
@@ -42,11 +51,16 @@ export function ReviewStep({
       draft.signature.trim() &&
       draft.openingText.trim() &&
       draft.closingText.trim() &&
-      (!draft.song.spotifyUrl.trim() || getSpotifyTrackId(draft.song.spotifyUrl)),
+      (!draft.song.spotifyUrl.trim() || getSpotifyTrackId(draft.song.spotifyUrl)) && !quizError,
   );
 
   return (
     <div className="space-y-7">
+      <div className="rounded-3xl border border-[#e2cdd5] bg-[#fff9fa] p-5">
+        <div className="flex items-center gap-3"><h3 className="font-serif text-2xl text-[#522434]">{isPremium ? "Sua cartinha Premium" : needsPremium ? "Uma cartinha com tudo de vocês" : "Sua cartinha grátis"}</h3>{(isPremium || needsPremium) && <PremiumBadge unlocked={isPremium} />}</div>
+        <p className="mt-2 text-xs leading-6 text-[#8b7079]">{isPremium ? "Quiz do casal e até 6 fotos liberados nesta cartinha. Nenhuma cobrança adicional por recurso." : needsPremium ? `Para publicar com Quiz ou mais de 2 fotos, desbloqueie todos os recursos Premium por ${PREMIUM_PRICE_LABEL}. Compra única por cartinha, sem assinatura.` : "Mensagem personalizada, nomes, data especial, até 2 fotos no carrossel, link exclusivo, QR Code e compartilhamento."}</p>
+        {needsPremium && <button type="button" onClick={onUpgrade} className="mt-4 min-h-12 rounded-full bg-[#8e2f4b] px-5 text-sm font-bold text-white">Desbloquear Premium — {PREMIUM_PRICE_LABEL}</button>}
+      </div>
       <div className="overflow-hidden rounded-3xl bg-[linear-gradient(145deg,#552032,#812d48)] p-6 text-white shadow-[0_20px_45px_rgba(70,25,40,0.16)] sm:p-8">
         <div className="flex items-center justify-between gap-4">
           <span className="grid size-11 place-items-center rounded-2xl bg-white/10 text-[#f2c5d1]">
@@ -111,7 +125,7 @@ export function ReviewStep({
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="max-w-md">
               <h3 className="font-serif text-2xl font-semibold text-[#522434]">Pronta para emocionar?</h3>
-              <p className="mt-1 text-xs leading-5 text-[#8b7079]">Ao publicar, a cartinha será salva no Neon, as imagens irão para o Cloudinary e um link público será criado.</p>
+              <p className="mt-1 text-xs leading-5 text-[#8b7079]">Ao publicar, sua cartinha ficará pronta para compartilhar por link e QR Code.</p>
             </div>
             <button
               type="button"
@@ -126,13 +140,14 @@ export function ReviewStep({
                 </>
               ) : (
                 <>
-                  Publicar e criar link
+                  {needsPremium ? `Desbloquear para publicar — ${PREMIUM_PRICE_LABEL}` : "Publicar e criar link"}
                   <ArrowIcon className="size-4" aria-hidden="true" />
                 </>
               )}
             </button>
           </div>
           {!canPublish ? <p className="mt-4 text-xs font-semibold text-[#a44a60]">Preencha os campos principais da história antes de publicar.</p> : null}
+          {quizError ? <p className="mt-3 text-xs text-[#a44a60]">{quizError}</p> : null}
           {publishError ? <p className="mt-4 text-xs font-semibold text-[#a6374d]" role="alert">{publishError}</p> : null}
         </div>
       )}

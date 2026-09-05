@@ -1,3 +1,5 @@
+import type { QuizQuestion } from "@/lib/letters/quiz";
+
 export const letterThemes = [
   {
     id: "vinho",
@@ -68,6 +70,8 @@ export type LetterDraft = {
   themeId: ThemeId;
   showRelationshipTime: boolean;
   showMusic: boolean;
+  quizEnabled: boolean;
+  quiz: QuizQuestion[];
   website: string;
 };
 
@@ -95,6 +99,8 @@ export const initialLetterDraft: LetterDraft = {
   themeId: "vinho",
   showRelationshipTime: true,
   showMusic: true,
+  quizEnabled: false,
+  quiz: [],
   website: "",
 };
 

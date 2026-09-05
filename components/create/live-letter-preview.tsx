@@ -6,6 +6,7 @@ import type { LetterDraft } from "@/components/create/types";
 import { getTheme } from "@/components/create/types";
 import { RelationshipCounter } from "@/components/letter/relationship-counter";
 import { SpotifyEmbed } from "@/components/letter/spotify-embed";
+import { CoupleQuiz } from "@/components/letter/couple-quiz";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -221,6 +222,8 @@ export function LiveLetterPreview({ draft, mode = "embedded" }: LiveLetterPrevie
             <SpotifyEmbed url={draft.song.spotifyUrl} title="Prévia da nossa música" />
           </section>
         ) : null}
+
+        {draft.quizEnabled && draft.quiz.length > 0 ? <CoupleQuiz key={JSON.stringify(draft.quiz)} questions={draft.quiz} /> : null}
 
         <section className="bg-[var(--letter-dark)] px-7 py-12 text-center text-white">
           <SparklesIcon className="mx-auto size-5 text-white/45" aria-hidden="true" />

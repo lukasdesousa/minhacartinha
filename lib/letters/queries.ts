@@ -27,6 +27,10 @@ export const getPublishedLetterBySlug = cache(async (slug: string) => {
         theme: true,
         showRelationshipTime: true,
         showMusic: true,
+        premiumStatus: true,
+        premiumRulesVersion: true,
+        quizEnabled: true,
+        quiz: true,
         images: {
           select: {
             id: true,

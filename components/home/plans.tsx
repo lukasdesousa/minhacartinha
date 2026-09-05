@@ -14,6 +14,7 @@ const premiumFeatures = [
   "Quiz do casal com as perguntas de vocês",
   "Mais de 2 fotos: até 6 no carrossel",
   "Todos os recursos Premium desta cartinha",
+  "15% destinados a causa animal (ONGs parceiras)",
 ];
 
 export function Plans() {

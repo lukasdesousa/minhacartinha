@@ -45,6 +45,58 @@ export function orderStatus(status?: string, detail?: string): LocalPaymentStatu
   return "PENDING";
 }
 
+export function paymentStatus(status?: string, detail?: string): LocalPaymentStatus {
+  if (status === "charged_back") return "CHARGED_BACK";
+  if (status === "refunded") return "REFUNDED";
+  if (status === "cancelled" && detail === "expired") return "EXPIRED";
+  if (status === "cancelled") return "CANCELLED";
+  if (status === "rejected") return "REJECTED";
+  if (status === "approved") return "APPROVED";
+  if (status === "pending" || status === "in_process" || status === "authorized") return "PENDING";
+  return "CREATING";
+}
+
+function financialDetails(financial: PaymentResponse, expected: ExpectedPayment, collectorId: string) {
+  mismatch(financial.id !== undefined && /^\d+$/.test(String(financial.id)), "PAYMENT_ID_MISMATCH");
+  mismatch(!expected.providerPaymentId || String(financial.id) === expected.providerPaymentId, "PAYMENT_ID_MISMATCH");
+  mismatch(financial.external_reference === expected.externalReference, "PAYMENT_REFERENCE_MISMATCH");
+  mismatch(financial.collector_id !== undefined && String(financial.collector_id) === collectorId, "PAYMENT_COLLECTOR_MISMATCH");
+  mismatch(financial.live_mode === expected.liveMode, "PAYMENT_LIVE_MODE_MISMATCH");
+  mismatch(financial.currency_id === PREMIUM_CURRENCY && moneyToCents(financial.transaction_amount) === expected.amountCents, "PAYMENT_AMOUNT_MISMATCH");
+  mismatch(expected.amountCents === PREMIUM_PRICE_CENTS, "PAYMENT_AMOUNT_MISMATCH");
+  mismatch(financial.payment_method_id === "pix" && financial.payment_type_id === "bank_transfer", "PAYMENT_METHOD_MISMATCH");
+  const refundedAmountCents = moneyToCents(financial.transaction_amount_refunded ?? 0);
+  mismatch(refundedAmountCents <= expected.amountCents, "REFUND_AMOUNT_MISMATCH");
+  const feeCents = Array.isArray(financial.fee_details) && financial.fee_details.every((fee) => fee.fee_payer === "collector" || fee.fee_payer === "payer")
+    ? financial.fee_details.filter((fee) => fee.fee_payer === "collector").reduce((sum, fee) => sum + moneyToCents(fee.amount), 0)
+    : null;
+  return { refundedAmountCents, feeCents };
+}
+
+export function validateDirectPaymentSnapshot(financial: PaymentResponse, expected: ExpectedPayment, collectorId: string) {
+  const details = financialDetails(financial, expected, collectorId);
+  let status = paymentStatus(financial.status, financial.status_detail);
+  const approvedAt = asDate(financial.date_approved);
+  if (status === "APPROVED") mismatch(!!approvedAt, "PAYMENT_NOT_ACCREDITED");
+  if (status === "REFUNDED" || status === "CHARGED_BACK") details.refundedAmountCents = expected.amountCents;
+  if (status === "APPROVED" && details.refundedAmountCents === expected.amountCents) status = "REFUNDED";
+  const transactionData = financial.point_of_interaction?.transaction_data;
+  return {
+    status,
+    providerPaymentId: String(financial.id),
+    providerStatus: financial.status ?? null,
+    providerStatusDetail: financial.status_detail ?? null,
+    refundedAmountCents: details.refundedAmountCents,
+    feeCents: details.feeCents,
+    liveMode: financial.live_mode!,
+    approvedAt,
+    expiresAt: asDate(financial.date_of_expiration),
+    providerUpdatedAt: asDate(financial.date_last_updated) ?? asDate(financial.date_created),
+    qrCode: transactionData?.qr_code ?? null,
+    qrCodeBase64: transactionData?.qr_code_base64 ?? null,
+  };
+}
+
 export function validateOrderIdentity(order: OrderResponse, expected: ExpectedPayment, collectorId: string) {
   mismatch(typeof order.id === "string" && /^ORD[A-Z0-9]{20,60}$/i.test(order.id), "ORDER_ID_MISMATCH");
   mismatch(!expected.providerOrderId || order.id === expected.providerOrderId, "ORDER_ID_MISMATCH");

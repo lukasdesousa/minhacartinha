@@ -1,17 +1,17 @@
 import { InvalidWebhookSignatureError, WebhookSignatureValidator } from "mercadopago";
 import { PaymentError } from "./config";
 
-export function verifyOrderWebhook(request: Request, secret: string) {
+export function verifyMercadoPagoWebhook(request: Request, secret: string) {
   const url = new URL(request.url);
-  const orderId = url.searchParams.get("data.id");
+  const resourceId = url.searchParams.get("data.id");
   const requestId = request.headers.get("x-request-id");
-  if (!orderId || !/^ORD[A-Z0-9]{20,60}$/i.test(orderId) || !requestId || requestId.length > 200) {
+  if (!resourceId || (!/^ORD[A-Z0-9]{20,60}$/i.test(resourceId) && !/^\d{1,32}$/.test(resourceId)) || !requestId || requestId.length > 200) {
     throw new PaymentError("Notificação inválida.", 401, "INVALID_WEBHOOK_ID");
   }
   const signatureOptions = {
     xSignature: request.headers.get("x-signature"),
     xRequestId: requestId,
-    dataId: orderId,
+    dataId: resourceId,
     secret,
     // Provider retries can arrive much later. Replays only re-fetch authoritative
     // current state and apply an idempotent transaction, never the notification body.
@@ -22,7 +22,14 @@ export function verifyOrderWebhook(request: Request, secret: string) {
     if (!(error instanceof InvalidWebhookSignatureError)) throw error;
     // Alphanumeric IDs may be canonicalized to lowercase by webhook delivery.
     // Both forms still require a valid HMAC for precisely the same Order ID.
-    WebhookSignatureValidator.validate({ ...signatureOptions, dataId: orderId.toLowerCase() });
+    if (!resourceId.toUpperCase().startsWith("ORD")) throw error;
+    WebhookSignatureValidator.validate({ ...signatureOptions, dataId: resourceId.toLowerCase() });
   }
-  return orderId.toUpperCase();
+  return resourceId.toUpperCase().startsWith("ORD") ? { type: "order" as const, id: resourceId.toUpperCase() } : { type: "payment" as const, id: resourceId };
+}
+
+export function verifyOrderWebhook(request: Request, secret: string) {
+  const resource = verifyMercadoPagoWebhook(request, secret);
+  if (resource.type !== "order") throw new PaymentError("Notificação inválida.", 401, "INVALID_WEBHOOK_ID");
+  return resource.id;
 }

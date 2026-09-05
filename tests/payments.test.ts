@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import test from "node:test";
-import { InvalidWebhookSignatureError, MercadoPagoConfig, Order } from "mercadopago";
+import { InvalidWebhookSignatureError, MercadoPagoConfig, Order, Payment } from "mercadopago";
 import type { OrderResponse } from "mercadopago/dist/clients/order/commonTypes";
 import type { PaymentResponse } from "mercadopago/dist/clients/payment/commonTypes";
 import { getPaymentConfig, PaymentError, PREMIUM_PRICE_CENTS } from "../lib/payments/config";
-import { pixOrderBody } from "../lib/payments/mercado-pago";
-import { grantsPremium, isActivePayment, mayApplySnapshot, moneyToCents, orderStatus, validatePaymentSnapshot } from "../lib/payments/policy";
-import { verifyOrderWebhook } from "../lib/payments/webhook";
+import { pixOrderBody, pixPaymentBody } from "../lib/payments/mercado-pago";
+import { grantsPremium, isActivePayment, mayApplySnapshot, moneyToCents, orderStatus, validateDirectPaymentSnapshot, validatePaymentSnapshot } from "../lib/payments/policy";
+import { verifyMercadoPagoWebhook, verifyOrderWebhook } from "../lib/payments/webhook";
 
 const orderId = "ORD01JQ4S4KY8HWQ6NA5PXB65B3D3";
 const transactionId = "PAY01JQ4S4KY8HWQ6NA5PXB65B3D3";
@@ -61,6 +61,30 @@ function fixture(status = "processed", detail = "accredited") {
   return { order, financial };
 }
 
+function directFixture(status = "pending", detail = "pending_waiting_transfer") {
+  const financial: PaymentResponse = {
+    api_response: apiResponse,
+    id: Number(referenceId),
+    external_reference: reference,
+    collector_id: Number(collectorId),
+    live_mode: true,
+    currency_id: "BRL",
+    transaction_amount: 7.90,
+    transaction_amount_refunded: 0,
+    payment_method_id: "pix",
+    payment_type_id: "bank_transfer",
+    status,
+    status_detail: detail,
+    date_created: "2026-09-05T12:00:00.000Z",
+    date_last_updated: "2026-09-05T12:00:00.000Z",
+    date_of_expiration: "2026-09-05T12:30:00.000Z",
+    date_approved: status === "approved" ? "2026-09-05T12:01:00.000Z" : undefined,
+    fee_details: [{ amount: 0.08, type: "mercadopago_fee", fee_payer: "collector" }],
+    point_of_interaction: { transaction_data: { qr_code: "TEST_DIRECT_PIX_COPY_PASTE", qr_code_base64: "VEVTVF9ESVJFQ1RfUElY" } },
+  };
+  return financial;
+}
+
 test("centavos são inteiros exatos; preço único vem do servidor", () => {
   assert.equal(PREMIUM_PRICE_CENTS, 790);
   assert.equal(moneyToCents("7.90"), 790);
@@ -95,6 +119,40 @@ test("SDK oficial cria Order Pix com idempotência persistida e mantém QR receb
     assert.equal(result.transactions?.payments?.[0].payment_method?.qr_code_base64, order.transactions?.payments?.[0].payment_method?.qr_code_base64);
   }
   assert.equal(calls, 2, "ambiguous retries use the same provider key, never a newly generated one");
+});
+
+test("SDK oficial cria Pix pelo endpoint Payments compatível e mantém o QR retornado", async (context) => {
+  const financial = directFixture();
+  const expiresAt = new Date("2026-09-05T12:30:00.000Z");
+  const idempotencyKey = "9097be24-2e34-4d10-9f54-8d04d7576ba4";
+  context.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+    assert.equal(String(input), "https://api.mercadopago.com/v1/payments");
+    assert.equal(init?.method, "POST");
+    assert.equal(new Headers(init?.headers).get("x-idempotency-key"), idempotencyKey);
+    const body = JSON.parse(String(init?.body));
+    assert.equal(body.transaction_amount, 7.90);
+    assert.equal(body.payment_method_id, "pix");
+    assert.equal(body.date_of_expiration, expiresAt.toISOString());
+    return new Response(JSON.stringify(financial), { status: 201, headers: { "content-type": "application/json" } });
+  });
+  const sdk = new Payment(new MercadoPagoConfig({ accessToken: "UNIT_TEST_TOKEN_NEVER_SENT", options: { maxRetries: 0 } }));
+  const result = await sdk.create({ body: pixPaymentBody(reference, "test@example.test", expiresAt), requestOptions: { idempotencyKey } });
+  assert.equal(result.point_of_interaction?.transaction_data?.qr_code, "TEST_DIRECT_PIX_COPY_PASTE");
+  assert.equal(result.point_of_interaction?.transaction_data?.qr_code_base64, "VEVTVF9ESVJFQ1RfUElY");
+});
+
+test("Pix direto só concede Premium após confirmação financeira integral", () => {
+  const directExpected = { ...expected, providerOrderId: null, providerPaymentId: referenceId, providerReferenceId: null };
+  const pending = validateDirectPaymentSnapshot(directFixture(), directExpected, collectorId);
+  assert.equal(pending.status, "PENDING");
+  assert.equal(pending.qrCode, "TEST_DIRECT_PIX_COPY_PASTE");
+  assert.equal(grantsPremium(pending), false);
+  const approved = validateDirectPaymentSnapshot(directFixture("approved", "accredited"), directExpected, collectorId);
+  assert.equal(approved.status, "APPROVED");
+  assert.equal(grantsPremium(approved), true);
+  const wrongAmount = directFixture();
+  wrongAmount.transaction_amount = 0.01;
+  assert.throws(() => validateDirectPaymentSnapshot(wrongAmount, directExpected, collectorId), PaymentError);
 });
 
 test("pagamento pendente mostra Pix oficial e não concede Premium", () => {
@@ -244,6 +302,8 @@ test("assinatura validada com SDK oficial; falsificação e troca de ID rejeitad
   assert.throws(() => verifyOrderWebhook(signedRequest(secret), "different-secret"), InvalidWebhookSignatureError);
   assert.throws(() => verifyOrderWebhook(signedRequest(secret, orderId, "ORD01JQ4S4KY8HWQ6NA5PXB65B3D4"), secret), InvalidWebhookSignatureError);
   assert.throws(() => verifyOrderWebhook(new Request("https://example.test/api/webhooks/mercado-pago"), secret), PaymentError);
+  const paymentRequest = signedRequest(secret, referenceId, referenceId);
+  assert.deepEqual(verifyMercadoPagoWebhook(paymentRequest, secret), { type: "payment", id: referenceId });
 });
 
 test("configuração financeira exige token, vendedor, webhook e modo explícito", () => {

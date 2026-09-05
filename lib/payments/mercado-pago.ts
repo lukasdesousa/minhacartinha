@@ -21,3 +21,14 @@ export function pixOrderBody(externalReference: string, payerEmail: string) {
     payer: { email: payerEmail },
   };
 }
+
+export function pixPaymentBody(externalReference: string, payerEmail: string, expiresAt: Date) {
+  return {
+    transaction_amount: PREMIUM_PRICE_CENTS / 100,
+    description: "Minha Cartinha Premium — compra única desta cartinha",
+    payment_method_id: "pix",
+    external_reference: externalReference,
+    date_of_expiration: expiresAt.toISOString(),
+    payer: { email: payerEmail },
+  };
+}

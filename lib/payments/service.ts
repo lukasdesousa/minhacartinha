@@ -5,8 +5,8 @@ import type { OrderResponse } from "mercadopago/dist/clients/order/commonTypes";
 import { requireLetterOwner } from "@/lib/letters/ownership";
 import { withPrisma } from "@/lib/prisma";
 import { ANIMAL_CAUSE_RATE_BPS, getPaymentConfig, PAYMENT_POLL_INTERVAL_MS, PaymentError, PREMIUM_PRICE_CENTS } from "./config";
-import { mercadoPago, pixOrderBody } from "./mercado-pago";
-import { grantsPremium, isActivePayment, mayApplySnapshot, validateOrderIdentity, validatePaymentSnapshot } from "./policy";
+import { mercadoPago, pixPaymentBody } from "./mercado-pago";
+import { grantsPremium, isActivePayment, mayApplySnapshot, orderStatus, validateDirectPaymentSnapshot, validateOrderIdentity, validatePaymentSnapshot } from "./policy";
 
 const LEASE_MS = 60_000;
 const SYNC_INTERVAL_MS = 12_000;
@@ -70,7 +70,9 @@ async function applyOrder(payment: Payment, order: OrderResponse) {
   const referenceId = transaction?.reference_id;
   // Orders expose the underlying financial payment ID as reference_id.
   // Read-only financial reconciliation supplies live_mode, currency, fees and cumulative refunds.
-  const financial = referenceId && /^\d+$/.test(referenceId) ? await financialPayments.get({ id: referenceId }) : null;
+  const preliminaryStatus = orderStatus(order.status, order.status_detail);
+  const needsFinancialReconciliation = ["APPROVED", "REFUNDED", "CHARGED_BACK"].includes(preliminaryStatus);
+  const financial = needsFinancialReconciliation && referenceId && /^\d+$/.test(referenceId) ? await financialPayments.get({ id: referenceId }) : null;
   const snapshot = validatePaymentSnapshot(order, financial, payment, configuration.collectorId);
   const result = await withPrisma((prisma) => prisma.$transaction(async (tx) => {
     await lockLetter(tx, payment.letterId);
@@ -97,28 +99,56 @@ async function applyOrder(payment: Payment, order: OrderResponse) {
   return result;
 }
 
-async function createProviderOrder(payment: Payment) {
+async function applyFinancialPayment(payment: Payment, financial: Awaited<ReturnType<ReturnType<typeof mercadoPago>["financialPayments"]["get"]>>) {
+  const { configuration } = mercadoPago();
+  const snapshot = validateDirectPaymentSnapshot(financial, payment, configuration.collectorId);
+  return withPrisma((prisma) => prisma.$transaction(async (tx) => {
+    await lockLetter(tx, payment.letterId);
+    const current = await tx.payment.findUniqueOrThrow({ where: { id: payment.id } });
+    if (!mayApplySnapshot(current, snapshot)) return current;
+    const updated = await tx.payment.update({ where: { id: payment.id }, data: {
+      ...snapshot,
+      providerOrderId: current.providerOrderId,
+      providerPaymentId: snapshot.providerPaymentId ?? current.providerPaymentId,
+      providerReferenceId: current.providerReferenceId,
+      expiresAt: snapshot.expiresAt ?? current.expiresAt,
+      approvedAt: snapshot.approvedAt ?? current.approvedAt,
+      feeCents: snapshot.feeCents ?? current.feeCents,
+      qrCode: isActivePayment(snapshot.status) ? snapshot.qrCode ?? current.qrCode : null,
+      qrCodeBase64: isActivePayment(snapshot.status) ? snapshot.qrCodeBase64 ?? current.qrCodeBase64 : null,
+      activeLetterId: isActivePayment(snapshot.status) ? current.activeLetterId : null,
+      lastSyncedAt: new Date(),
+      lastErrorCode: null,
+    } });
+    await refreshPremiumStatus(tx, payment.letterId);
+    if (current.status !== updated.status) paymentLog("status_changed", payment.id, updated.status);
+    return updated;
+  }));
+}
+
+async function createProviderPayment(payment: Payment) {
   const now = new Date();
+  const expiresAt = new Date(now.getTime() + 30 * 60_000);
   const acquired = await withPrisma((prisma) => prisma.payment.updateMany({
-    where: { id: payment.id, providerOrderId: null, status: "CREATING", OR: [{ creationClaimedAt: null }, { creationClaimedAt: { lt: new Date(now.getTime() - LEASE_MS) } }] },
+    where: { id: payment.id, providerOrderId: null, providerPaymentId: null, status: "CREATING", OR: [{ creationClaimedAt: null }, { creationClaimedAt: { lt: new Date(now.getTime() - LEASE_MS) } }] },
     data: { creationClaimedAt: now },
   }));
   if (!acquired.count) return readPayment(payment.id);
   try {
-    const { orders } = mercadoPago();
-    const order = await orders.create({ body: pixOrderBody(payment.externalReference, payment.payerEmail), requestOptions: { idempotencyKey: payment.idempotencyKey } });
-    // Persist identity before reconciliation: a transient financial lookup must never issue another Pix.
-    if (!order.id || !/^ORD[A-Z0-9]{20,60}$/i.test(order.id)) throw new PaymentError("O Pix está sendo preparado. Tente novamente em instantes.", 502, "ORDER_ID_MISSING");
-    const identified = await withPrisma((prisma) => prisma.payment.update({ where: { id: payment.id }, data: { providerOrderId: order.id, expiresAt: new Date(now.getTime() + 30 * 60_000) } }));
-    paymentLog("order_created", payment.id);
-    return await applyOrder(identified, order);
+    const { financialPayments } = mercadoPago();
+    const financial = await financialPayments.create({ body: pixPaymentBody(payment.externalReference, payment.payerEmail, expiresAt), requestOptions: { idempotencyKey: payment.idempotencyKey } });
+    // Persist identity before reconciliation: a transient failure must never issue another Pix.
+    if (financial.id === undefined || !/^\d+$/.test(String(financial.id))) throw new PaymentError("O Pix está sendo preparado. Tente novamente em instantes.", 502, "PAYMENT_ID_MISSING");
+    const identified = await withPrisma((prisma) => prisma.payment.update({ where: { id: payment.id }, data: { providerPaymentId: String(financial.id), expiresAt } }));
+    paymentLog("payment_created", payment.id);
+    return await applyFinancialPayment(identified, financial);
   } catch (error) {
     // An ambiguous timeout stays on the SAME persisted idempotency key for safe recovery.
     const code = safePaymentErrorCode(error);
     await withPrisma((prisma) => prisma.$transaction(async (tx) => {
       await lockLetter(tx, payment.letterId);
       const current = await tx.payment.findUniqueOrThrow({ where: { id: payment.id } });
-      const rejectedBeforeCreation = !current.providerOrderId && error instanceof MercadoPagoError && [400, 422].includes(error.status);
+      const rejectedBeforeCreation = !current.providerOrderId && !current.providerPaymentId && error instanceof MercadoPagoError && [400, 422].includes(error.status);
       await tx.payment.update({ where: { id: payment.id }, data: {
         lastErrorCode: code,
         ...(rejectedBeforeCreation ? { status: "REJECTED", activeLetterId: null } : {}),
@@ -131,7 +161,7 @@ async function createProviderOrder(payment: Payment) {
 }
 
 export async function syncPayment(payment: Payment, options: { force?: boolean; expire?: boolean } = {}) {
-  if (!payment.providerOrderId) return createProviderOrder(payment);
+  if (!payment.providerOrderId && !payment.providerPaymentId) return createProviderPayment(payment);
   const now = new Date();
   const acquired = await withPrisma((prisma) => prisma.payment.updateMany({
     where: {
@@ -148,17 +178,38 @@ export async function syncPayment(payment: Payment, options: { force?: boolean; 
     return readPayment(payment.id);
   }
   try {
+    if (!payment.providerOrderId && payment.providerPaymentId) {
+      const { financialPayments } = mercadoPago();
+      let financial = await financialPayments.get({ id: payment.providerPaymentId });
+      let updated = await applyFinancialPayment(payment, financial);
+      if (options.expire && isActivePayment(updated.status) && updated.expiresAt && updated.expiresAt <= now) {
+        try {
+          financial = await financialPayments.cancel({ id: payment.providerPaymentId, requestOptions: { idempotencyKey: payment.id } });
+        } catch {
+          // It may have been accredited while cancellation was requested.
+          financial = await financialPayments.get({ id: payment.providerPaymentId });
+        }
+        updated = await applyFinancialPayment(updated, financial);
+        if (updated.status === "CANCELLED") {
+          await withPrisma((prisma) => prisma.payment.updateMany({ where: { id: updated.id, status: "CANCELLED" }, data: { status: "EXPIRED" } }));
+          updated = await readPayment(updated.id);
+        }
+      }
+      return updated;
+    }
+    const orderId = payment.providerOrderId;
+    if (!orderId) throw new PaymentError("Identificação do pagamento ausente.", 502, "PROVIDER_ID_MISSING");
     const { orders } = mercadoPago();
-    let order = await orders.get({ id: payment.providerOrderId });
+    let order = await orders.get({ id: orderId });
     let updated = await applyOrder(payment, order);
     if (options.expire && isActivePayment(updated.status) && updated.expiresAt && updated.expiresAt <= now) {
       try {
         // Only a provider-confirmed cancellation/expiry permits another charge attempt.
-        await orders.cancel({ id: payment.providerOrderId, requestOptions: { idempotencyKey: payment.id } });
+        await orders.cancel({ id: orderId, requestOptions: { idempotencyKey: payment.id } });
       } catch {
         // Payment could have been accredited during cancellation; re-read before deciding.
       }
-      order = await orders.get({ id: payment.providerOrderId });
+      order = await orders.get({ id: orderId });
       updated = await applyOrder(updated, order);
       if (updated.status === "CANCELLED") {
         await withPrisma((prisma) => prisma.payment.updateMany({ where: { id: updated.id, status: "CANCELLED" }, data: { status: "EXPIRED" } }));
@@ -237,5 +288,27 @@ export async function reconcileWebhook(orderId: string) {
     validateOrderIdentity(order, payment, configuration.collectorId);
     payment = await withPrisma((prisma) => prisma.payment.update({ where: { id: payment!.id }, data: { providerOrderId: orderId } }));
   }
+  await syncPayment(payment, { force: true });
+}
+
+export async function reconcilePaymentWebhook(paymentId: string) {
+  if (!/^\d{1,32}$/.test(paymentId)) return;
+  let payment = await withPrisma((prisma) => prisma.payment.findFirst({
+    where: { OR: [{ providerPaymentId: paymentId }, { providerReferenceId: paymentId }] },
+  }));
+  if (payment) {
+    await syncPayment(payment, { force: true });
+    return;
+  }
+
+  // A notification may arrive before the create response is persisted. Re-read
+  // the authoritative payment and bind it only after every immutable field agrees.
+  const { financialPayments, configuration } = mercadoPago();
+  const financial = await financialPayments.get({ id: paymentId });
+  if (!financial.external_reference?.startsWith("mc_")) return;
+  payment = await withPrisma((prisma) => prisma.payment.findUnique({ where: { externalReference: financial.external_reference! } }));
+  if (!payment || payment.providerOrderId) return;
+  validateDirectPaymentSnapshot(financial, payment, configuration.collectorId);
+  payment = await withPrisma((prisma) => prisma.payment.update({ where: { id: payment!.id }, data: { providerPaymentId: paymentId } }));
   await syncPayment(payment, { force: true });
 }

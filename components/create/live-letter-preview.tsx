@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { LetterDraft } from "@/components/create/types";
 import { getTheme } from "@/components/create/types";
 import { RelationshipCounter } from "@/components/letter/relationship-counter";
 import { SpotifyEmbed } from "@/components/letter/spotify-embed";
 import { CoupleQuiz } from "@/components/letter/couple-quiz";
+import { ScratchReveal } from "@/components/letter/love-vouchers";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -16,6 +17,7 @@ import {
   SparklesIcon,
 } from "@/components/ui/icons";
 import { getSpotifyEmbedUrl } from "@/lib/spotify";
+import { secureRandomIndex } from "@/lib/letters/romantic-features";
 
 const placeholderSlides = [
   {
@@ -42,6 +44,10 @@ type LiveLetterPreviewProps = {
 
 export function LiveLetterPreview({ draft, mode = "embedded" }: LiveLetterPreviewProps) {
   const [activeSlide, setActiveSlide] = useState(0);
+  const [wheelRotation, setWheelRotation] = useState(0);
+  const [wheelResult, setWheelResult] = useState("");
+  const [wheelSpinning, setWheelSpinning] = useState(false);
+  const wheelSpinningRef = useRef(false);
   const theme = getTheme(draft.themeId);
   const slides = draft.gallery.length
     ? draft.gallery.map((photo) => ({
@@ -65,6 +71,22 @@ export function LiveLetterPreview({ draft, mode = "embedded" }: LiveLetterPrevie
 
   function moveSlide(direction: number) {
     setActiveSlide((current) => (Math.min(current, slides.length - 1) + direction + slides.length) % slides.length);
+  }
+
+  function spinWheelPreview() {
+    const options = draft.loveWheelOptions;
+    if (wheelSpinningRef.current || options.length < 2 || options.some((option) => !option.title.trim())) return;
+    wheelSpinningRef.current = true;
+    setWheelSpinning(true);
+    setWheelResult("");
+    const index = secureRandomIndex(options.length);
+    const center = (index + 0.5) * 360 / options.length;
+    setWheelRotation(Math.ceil(wheelRotation / 360) * 360 + 4 * 360 - center);
+    window.setTimeout(() => {
+      setWheelResult(options[index].title);
+      setWheelSpinning(false);
+      wheelSpinningRef.current = false;
+    }, 2_700);
   }
 
   return (
@@ -177,7 +199,7 @@ export function LiveLetterPreview({ draft, mode = "embedded" }: LiveLetterPrevie
           </div>
         </section>
 
-        <section className="px-6 py-11">
+        {draft.showFavoritePlace ? <section className="px-6 py-11">
           <div
             className="relative flex min-h-64 flex-col justify-end overflow-hidden rounded-[1.8rem] p-6 text-white shadow-[0_15px_35px_rgba(55,23,34,0.12)]"
             style={{
@@ -198,7 +220,7 @@ export function LiveLetterPreview({ draft, mode = "embedded" }: LiveLetterPrevie
               </p>
             </div>
           </div>
-        </section>
+        </section> : null}
 
         {draft.showRelationshipTime && draft.relationshipStartedAt ? (
           <section className="bg-[var(--letter-wash)] px-5 py-10">
@@ -224,6 +246,10 @@ export function LiveLetterPreview({ draft, mode = "embedded" }: LiveLetterPrevie
         ) : null}
 
         {draft.quizEnabled && draft.quiz.length > 0 ? <CoupleQuiz key={JSON.stringify(draft.quiz)} questions={draft.quiz} /> : null}
+
+        {draft.vouchersEnabled && draft.vouchers.length > 0 ? <section className="bg-[var(--letter-wash)] px-5 py-10 text-center"><p className="text-[8px] font-bold uppercase tracking-[0.2em] text-[var(--letter-muted)]">Presentes para viver</p><h3 className="mt-2 font-serif text-3xl font-semibold text-[var(--letter-dark)]">Vales do Amor</h3><p className="mb-5 mt-2 text-[10px] text-[#7d5c67]">Raspe para testar a surpresa na prévia.</p><ScratchReveal key={draft.vouchers[0].id} voucher={{ ...draft.vouchers[0], title: draft.vouchers[0].title || "Seu vale romântico", usedCount: 0 }} onReveal={() => {}} />{draft.vouchers.length > 1 ? <p className="mt-4 text-[10px] font-semibold text-[#8d6c78]">+ {draft.vouchers.length - 1} {draft.vouchers.length === 2 ? "outro vale" : "outros vales"}</p> : null}</section> : null}
+
+        {draft.loveWheelEnabled && draft.loveWheelOptions.length >= 2 ? <section className="px-5 py-10 text-center"><p className="text-[8px] font-bold uppercase tracking-[0.2em] text-[var(--letter-muted)]">Uma surpresa do acaso</p><h3 className="mt-2 font-serif text-3xl font-semibold text-[var(--letter-dark)]">{draft.loveWheelTitle || "Roleta do Amor"}</h3><div className="relative mx-auto mt-5 w-fit"><span className="absolute left-1/2 top-[-9px] z-10 -translate-x-1/2 text-2xl text-[var(--letter-dark)]" aria-hidden="true">▼</span><div className="grid size-48 place-items-center rounded-full border-[8px] border-[#fff8fa] bg-[conic-gradient(from_-90deg,#8e2f4b_0_25%,#d78da1_0_50%,#6d557b_0_75%,#e3b17e_0)] shadow-lg" style={{ transform: `rotate(${wheelRotation}deg)`, transition: "transform 2.6s cubic-bezier(.12,.72,.12,1)" }}><span className="grid size-16 place-items-center rounded-full bg-white font-serif text-sm font-bold text-[#6f2b42]">Amor</span></div></div><button type="button" onClick={spinWheelPreview} disabled={wheelSpinning || draft.loveWheelOptions.some((option) => !option.title.trim())} className="mt-5 min-h-10 rounded-full bg-[var(--letter-accent)] px-5 text-xs font-bold text-white disabled:opacity-45">{wheelSpinning ? "Girando..." : "Girar na prévia"}</button><p className="mt-3 min-h-5 text-xs font-semibold text-[#7d5c67]" role="status">{wheelResult ? `A roleta escolheu: ${wheelResult}` : `${draft.loveWheelOptions.length} opções prontas para girar`}</p></section> : null}
 
         <section className="bg-[var(--letter-dark)] px-7 py-12 text-center text-white">
           <SparklesIcon className="mx-auto size-5 text-white/45" aria-hidden="true" />

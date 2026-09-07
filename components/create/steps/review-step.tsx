@@ -6,6 +6,7 @@ import { PublishedSuccess } from "@/components/create/published-success";
 import { PremiumBadge } from "@/components/create/premium-badge";
 import { PREMIUM_PRICE_LABEL } from "@/lib/premium";
 import { getQuizError } from "@/lib/letters/quiz";
+import { getRomanticFeaturesError } from "@/lib/letters/romantic-features";
 import { getSpotifyTrackId } from "@/lib/spotify";
 import { ArrowIcon, CheckIcon, EyeIcon, LockIcon, PhotoIcon, SparklesIcon } from "@/components/ui/icons";
 
@@ -34,14 +35,17 @@ export function ReviewStep({
 }: ReviewStepProps) {
   const needsPremiumPayment = premiumSelected && !premiumPaid;
   const quizError = draft.quizEnabled ? getQuizError(draft.quiz) : "";
+  const romanticError = getRomanticFeaturesError(draft);
   const checks = [
     { label: "Mensagem escrita", complete: Boolean(draft.message.trim()) },
     { label: "E-mail para entrega", complete: Boolean(draft.recipientEmail.trim()) },
     { label: "Foto principal", complete: Boolean(draft.heroImage) },
     { label: "Carrossel de momentos", complete: draft.gallery.length > 0 },
-    { label: "Lugar favorito", complete: Boolean(draft.favoritePlace.name.trim()) },
+    { label: "Lugar favorito", complete: !draft.showFavoritePlace || Boolean(draft.favoritePlace.name.trim()), hidden: !draft.showFavoritePlace },
     { label: "Tempo de namoro", complete: Boolean(draft.relationshipStartedAt) },
     { label: "Música no Spotify", complete: Boolean(getSpotifyTrackId(draft.song.spotifyUrl)) },
+    { label: "Vales do Amor", complete: draft.vouchersEnabled && draft.vouchers.length > 0, hidden: !draft.vouchersEnabled },
+    { label: "Roleta do Amor", complete: draft.loveWheelEnabled && draft.loveWheelOptions.length >= 2, hidden: !draft.loveWheelEnabled },
   ];
   const completed = checks.filter((item) => item.complete).length;
   const canPublish = Boolean(
@@ -53,14 +57,14 @@ export function ReviewStep({
       draft.signature.trim() &&
       draft.openingText.trim() &&
       draft.closingText.trim() &&
-      (!draft.song.spotifyUrl.trim() || getSpotifyTrackId(draft.song.spotifyUrl)) && !quizError,
+      (!draft.song.spotifyUrl.trim() || getSpotifyTrackId(draft.song.spotifyUrl)) && !quizError && !romanticError,
   );
 
   return (
     <div className="space-y-7">
       <div className="rounded-3xl border border-[#e2cdd5] bg-[#fff9fa] p-5">
         <div className="flex items-center gap-3"><h3 className="font-serif text-2xl text-[#522434]">{premiumSelected ? "Sua cartinha Premium" : "Sua cartinha grátis"}</h3>{premiumSelected && <PremiumBadge unlocked={premiumPaid} selected={!premiumPaid} />}</div>
-        <p className="mt-2 text-xs leading-6 text-[#8b7079]">{premiumPaid ? "Pagamento confirmado. Quiz do casal e até 6 fotos estão liberados nesta cartinha." : premiumSelected ? `Sua cartinha está pronta para o pagamento único de ${PREMIUM_PRICE_LABEL}. O QR Code Pix será criado aqui, antes da publicação e do envio.` : "Mensagem personalizada, nomes, data especial, até 2 fotos no carrossel, link exclusivo, QR Code da cartinha e compartilhamento."}</p>
+        <p className="mt-2 text-xs leading-6 text-[#8b7079]">{premiumPaid ? "Pagamento confirmado. Quiz, Vales do Amor, Roleta, até 6 fotos e cartinha disponível para sempre." : premiumSelected ? `Sua cartinha está pronta para o pagamento único de ${PREMIUM_PRICE_LABEL}. Todos os recursos Premium serão liberados juntos.` : "Mensagem personalizada, até 2 fotos, link e QR Code. Depois de publicada, a cartinha grátis fica disponível por 2 dias."}</p>
       </div>
       <div className="overflow-hidden rounded-3xl bg-[linear-gradient(145deg,#552032,#812d48)] p-6 text-white shadow-[0_20px_45px_rgba(70,25,40,0.16)] sm:p-8">
         <div className="flex items-center justify-between gap-4">
@@ -98,7 +102,7 @@ export function ReviewStep({
                 </span>
                 {item.label}
                 <span className="ml-auto text-[10px] font-bold uppercase tracking-wider text-[#a18a91]">
-                  {item.complete ? "Pronto" : "Opcional"}
+                  {item.hidden ? "Oculto" : item.complete ? "Pronto" : "Opcional"}
                 </span>
               </li>
             ))}
@@ -126,7 +130,7 @@ export function ReviewStep({
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="max-w-md">
               <h3 className="font-serif text-2xl font-semibold text-[#522434]">Pronta para emocionar?</h3>
-              <p className="mt-1 text-xs leading-5 text-[#8b7079]">Ao publicar, sua cartinha ficará pronta para compartilhar por link e QR Code.</p>
+              <p className="mt-1 text-xs leading-5 text-[#8b7079]">{premiumPaid ? "Ao publicar, sua cartinha ficará disponível para sempre." : "Ao publicar, sua cartinha ficará disponível por 2 dias para compartilhar por link e QR Code."}</p>
             </div>
             <button
               type="button"
@@ -149,6 +153,7 @@ export function ReviewStep({
           </div>
           {!canPublish ? <p className="mt-4 text-xs font-semibold text-[#a44a60]">Preencha os campos principais da história antes de publicar.</p> : null}
           {quizError ? <p className="mt-3 text-xs text-[#a44a60]">{quizError}</p> : null}
+          {romanticError ? <p className="mt-3 text-xs text-[#a44a60]">{romanticError}</p> : null}
           {publishError ? <p className="mt-4 text-xs font-semibold text-[#a6374d]" role="alert">{publishError}</p> : null}
         </div>
       )}

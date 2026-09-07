@@ -7,6 +7,8 @@ import { getTheme } from "@/components/create/types";
 import { RelationshipCounter } from "@/components/letter/relationship-counter";
 import { SpotifyEmbed } from "@/components/letter/spotify-embed";
 import { CoupleQuiz } from "@/components/letter/couple-quiz";
+import { LoveVouchers } from "@/components/letter/love-vouchers";
+import { LoveWheel } from "@/components/letter/love-wheel";
 import type { PublicLetterData } from "@/lib/letters/contracts";
 import { Brand } from "@/components/ui/brand";
 import {
@@ -205,7 +207,7 @@ export function PublishedLetter({ letter }: PublishedLetterProps) {
         </section>
       ) : null}
 
-      {letter.favoritePlace.name || letter.favoritePlace.image ? (
+      {letter.showFavoritePlace ? (
         <section className="px-5 py-24 sm:px-8 sm:py-32">
           <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
             <div>
@@ -275,6 +277,8 @@ export function PublishedLetter({ letter }: PublishedLetterProps) {
       ) : null}
 
       {letter.quizEnabled && letter.quiz.length > 0 ? <CoupleQuiz questions={letter.quiz} /> : null}
+      {letter.vouchersEnabled && letter.vouchers.length > 0 ? <LoveVouchers slug={letter.slug} vouchers={letter.vouchers} /> : null}
+      {letter.loveWheelEnabled && letter.loveWheelOptions.length >= 2 ? <LoveWheel slug={letter.slug} title={letter.loveWheelTitle} options={letter.loveWheelOptions} /> : null}
 
       <section className="relative isolate overflow-hidden bg-[var(--letter-dark)] px-5 py-24 text-center text-white sm:px-8 sm:py-32">
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_30%,rgba(255,255,255,0.08),transparent_28%),radial-gradient(circle_at_82%_75%,rgba(255,255,255,0.06),transparent_24%)]" aria-hidden="true" />

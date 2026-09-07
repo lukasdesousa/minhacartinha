@@ -56,8 +56,8 @@ test("migrations preserve old letters and enforce financial and donation constra
       await db.exec(await readFile(new URL(`${name}/migration.sql`, migrationsUrl), "utf8"));
     }
 
-    const legacy = await db.query('SELECT status, "premiumStatus", "premiumRulesVersion", "quizEnabled", "ownerTokenHash" FROM letters WHERE id=\'legacy-letter\'');
-    assert.deepEqual(legacy.rows, [{ status: "PUBLISHED", premiumStatus: "FREE", premiumRulesVersion: 0, quizEnabled: false, ownerTokenHash: null }]);
+    const legacy = await db.query('SELECT status, "premiumStatus", "premiumRulesVersion", "quizEnabled", "vouchersEnabled", "loveWheelEnabled", "ownerTokenHash", "showFavoritePlace", "expiresAt" IS NOT NULL AS "hasExpiration" FROM letters WHERE id=\'legacy-letter\'');
+    assert.deepEqual(legacy.rows, [{ status: "PUBLISHED", premiumStatus: "FREE", premiumRulesVersion: 0, quizEnabled: false, vouchersEnabled: false, loveWheelEnabled: false, ownerTokenHash: null, showFavoritePlace: true, hasExpiration: true }]);
     await createLetter("new-letter");
     const created = await db.query('SELECT "premiumStatus", "premiumRulesVersion" FROM letters WHERE id=\'new-letter\'');
     assert.deepEqual(created.rows, [{ premiumStatus: "FREE", premiumRulesVersion: 1 }]);
@@ -76,6 +76,22 @@ test("migrations preserve old letters and enforce financial and donation constra
     await createPayment({ refundedAmountCents: 790 });
     const snapshot = await db.query('SELECT "allocationBasis", "allocationRateBps" FROM payments WHERE id=$1', [activePayment.id]);
     assert.deepEqual(snapshot.rows, [{ allocationBasis: "GROSS_AFTER_REFUNDS", allocationRateBps: 1500 }]);
+    await db.query('UPDATE payments SET "activeLetterId"=NULL WHERE "letterId"=\'new-letter\'');
+    await db.query('DELETE FROM letters WHERE id=\'new-letter\'');
+    const preservedPayments = await db.query('SELECT "letterId" FROM payments WHERE id=$1', [activePayment.id]);
+    assert.deepEqual(preservedPayments.rows, [{ letterId: null }]);
+
+    await db.query('INSERT INTO love_vouchers (id,"letterId",title,position,"totalUses","updatedAt") VALUES (\'voucher-one\',\'legacy-letter\',\'Café na cama\',0,1,NOW())');
+    const redemptions = await Promise.all([
+      db.query('UPDATE love_vouchers SET "usedCount"="usedCount"+1,"updatedAt"=NOW() WHERE id=\'voucher-one\' AND ("totalUses" IS NULL OR "usedCount" < "totalUses") RETURNING "usedCount"'),
+      db.query('UPDATE love_vouchers SET "usedCount"="usedCount"+1,"updatedAt"=NOW() WHERE id=\'voucher-one\' AND ("totalUses" IS NULL OR "usedCount" < "totalUses") RETURNING "usedCount"'),
+    ]);
+    assert.equal(redemptions.reduce((total, result) => total + result.rows.length, 0), 1);
+    await assert.rejects(db.query('INSERT INTO love_vouchers (id,"letterId",title,position,"totalUses","updatedAt") VALUES (\'invalid-voucher\',\'legacy-letter\',\'Inválido\',1,4,NOW())'), { code: "23514", constraint: "love_vouchers_total_uses_valid" });
+    await db.query('INSERT INTO love_wheels (id,"letterId","updatedAt") VALUES (\'wheel-one\',\'legacy-letter\',NOW())');
+    assert.deepEqual((await db.query('SELECT title FROM love_wheels WHERE id=\'wheel-one\'')).rows, [{ title: "Roleta do Amor" }]);
+    await db.query('INSERT INTO love_wheel_options (id,"wheelId",title,position) VALUES (\'wheel-option-one\',\'wheel-one\',\'Cinema\',0)');
+    await assert.rejects(db.query('INSERT INTO love_wheel_options (id,"wheelId",title,position) VALUES (\'wheel-option-two\',\'wheel-one\',\'Piquenique\',0)'), { code: "23505", constraint: "love_wheel_options_wheelId_position_key" });
 
     await db.query('INSERT INTO donation_institutions (id,name,"updatedAt") VALUES (\'fixture-institution\',\'Isolated fixture\',NOW())');
     await createDonation(); // Draft records do not require a receipt yet.

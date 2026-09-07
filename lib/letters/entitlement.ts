@@ -7,12 +7,19 @@ export class PremiumRequiredError extends Error {
   }
 }
 
-export function needsPremium(input: { quizEnabled: boolean; galleryCount: number }) {
-  return input.quizEnabled || input.galleryCount > FREE_GALLERY_LIMIT;
+export type PremiumFeatures = {
+  quizEnabled: boolean;
+  galleryCount: number;
+  vouchersEnabled?: boolean;
+  loveWheelEnabled?: boolean;
+};
+
+export function needsPremium(input: PremiumFeatures) {
+  return input.quizEnabled || input.galleryCount > FREE_GALLERY_LIMIT || input.vouchersEnabled === true || input.loveWheelEnabled === true;
 }
 
 export function assertPublishEntitlement(
-  input: { quizEnabled: boolean; galleryCount: number },
+  input: PremiumFeatures,
   premiumStatus: string,
 ) {
   if (needsPremium(input) && premiumStatus !== "PREMIUM") throw new PremiumRequiredError();

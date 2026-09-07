@@ -7,13 +7,17 @@ const freeFeatures = [
   "Mensagem, nomes e data especial",
   "Até 2 fotos no carrossel",
   "Link exclusivo, QR Code e compartilhamento",
+  "Disponível por 2 dias após a publicação",
 ];
 
 const premiumFeatures = [
-  "Tudo o que a cartinha grátis oferece",
+  "Tudo da cartinha grátis, sem a expiração",
   "Quiz do casal com as perguntas de vocês",
+  "Vales do Amor personalizados",
+  "Roleta do Amor interativa",
   "Mais de 2 fotos: até 6 no carrossel",
   "Todos os recursos Premium desta cartinha",
+  "Cartinha disponível para sempre",
   "15% destinados a causa animal (ONGs parceiras)",
 ];
 
@@ -24,7 +28,7 @@ export function Plans() {
         <SectionHeading
           eyebrow="Do seu jeito"
           title="Uma cartinha, muitas formas de amar."
-          description="Comece grátis. Se quiser incluir um quiz ou mais fotos, uma única compra libera o Premium para aquela cartinha."
+          description="Comece grátis. Uma única compra libera Quiz, Vales do Amor, Roleta e mais fotos para aquela cartinha."
         />
         <div className="mt-12 grid gap-5 md:grid-cols-2">
           <article className="flex flex-col rounded-[2rem] border border-[#e9dce0] bg-white p-7 sm:p-9">

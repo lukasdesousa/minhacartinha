@@ -25,6 +25,7 @@ import { withPrisma } from "@/lib/prisma";
 import { LetterAccessError, getOwnerToken, requireLetterOwner } from "@/lib/letters/ownership";
 import { readLetterJson, RequestBodyError, REQUEST_KEY_PATTERN } from "@/lib/letters/request";
 import { assertPublishEntitlement, needsPremium, PremiumRequiredError } from "@/lib/letters/entitlement";
+import { getLetterExpirationAt } from "@/lib/letters/expiration";
 
 export const runtime = "nodejs";
 
@@ -63,7 +64,12 @@ export async function POST(request: Request) {
       return Response.json(await getExistingLetterResponse(requestKey, request.url), { headers: { "Cache-Control": "private, no-store" } });
     }
     const payload = parseLetterPayload(await readLetterJson(request));
-    const premiumFeatures = { quizEnabled: payload.quizEnabled, galleryCount: payload.images.filter((image) => image.role === "GALLERY").length };
+    const premiumFeatures = {
+      quizEnabled: payload.quizEnabled,
+      galleryCount: payload.images.filter((image) => image.role === "GALLERY").length,
+      vouchersEnabled: payload.vouchersEnabled,
+      loveWheelEnabled: payload.loveWheelEnabled,
+    };
     assertPublishEntitlement(premiumFeatures, draft.premiumStatus);
     const requiresPremium = needsPremium(premiumFeatures);
     const claim = await withPrisma((prisma) => prisma.letter.updateMany({
@@ -92,7 +98,12 @@ export async function POST(request: Request) {
       // Compare entitlement again at commit: a concurrent refund must not let
       // an unpaid Premium draft publish after image uploads complete.
       const published = await tx.letter.updateMany({
-        where: { id: draft.id, status: LetterStatus.DRAFT, publicationClaim, ...(requiresPremium ? { premiumStatus: "PREMIUM" as const } : {}) },
+        where: {
+          id: draft.id,
+          status: LetterStatus.DRAFT,
+          publicationClaim,
+          premiumStatus: requiresPremium ? "PREMIUM" : draft.premiumStatus,
+        },
         data: {
           recipientName: payload.recipientName,
           recipientEmail: payload.recipientEmail,
@@ -105,6 +116,7 @@ export async function POST(request: Request) {
           closingText: payload.closingText,
           favoritePlaceName: payload.favoritePlaceName,
           favoritePlaceCaption: payload.favoritePlaceCaption,
+          showFavoritePlace: payload.showFavoritePlace,
           songTitle: payload.songTitle,
           songArtist: payload.songArtist,
           spotifyUrl: payload.spotifyUrl,
@@ -113,11 +125,14 @@ export async function POST(request: Request) {
           showMusic: payload.showMusic,
           quizEnabled: payload.quizEnabled,
           quiz: payload.quiz,
+          vouchersEnabled: payload.vouchersEnabled,
+          loveWheelEnabled: payload.loveWheelEnabled,
           draftData: Prisma.DbNull,
           publicationClaim: null,
           publicationClaimedAt: null,
           status: LetterStatus.PUBLISHED,
           publishedAt: now,
+          expiresAt: getLetterExpirationAt(draft.premiumStatus, now),
           emailStatus: EmailDeliveryStatus.PENDING,
         },
       });
@@ -142,6 +157,26 @@ export async function POST(request: Request) {
               size: uploaded.size,
             })),
           },
+          vouchers: payload.vouchersEnabled ? {
+            create: payload.vouchers.map((voucher, position) => ({
+              title: voucher.title,
+              description: voucher.description || null,
+              position,
+              totalUses: voucher.totalUses,
+            })),
+          } : undefined,
+          loveWheel: payload.loveWheelEnabled ? {
+            create: {
+              title: payload.loveWheelTitle,
+              options: {
+                create: payload.loveWheelOptions.map((option, position) => ({
+                  title: option.title,
+                  description: option.description || null,
+                  position,
+                })),
+              },
+            },
+          } : undefined,
         },
         select: {
           id: true,

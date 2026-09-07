@@ -25,7 +25,7 @@ const paymentLabels: Record<PaymentStatus, string> = {
 
 export function PremiumCheckout({ open, reason, letterId, ownerToken, isPremium, ensureDraft, onClose, onStatus }: {
   open: boolean;
-  reason: "quiz" | "photos" | "all";
+  reason: "quiz" | "photos" | "vouchers" | "wheel" | "all";
   letterId: string | null;
   ownerToken: string;
   isPremium: boolean;
@@ -134,13 +134,13 @@ export function PremiumCheckout({ open, reason, letterId, ownerToken, isPremium,
         <span className="rounded-full border border-[#e1c9cd] bg-[#f9ecec] px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-[#92536a]">Uma compra, sua cartinha completa</span>
         <button type="button" onClick={onClose} aria-label="Fechar checkout e continuar editando" className="grid size-10 shrink-0 place-items-center rounded-full border border-[#e4d4da] text-[#855366] hover:bg-[#f6e8ed]"><XIcon className="size-4" /></button>
       </div>
-      <h2 id="premium-checkout-title" className="mt-5 font-serif text-3xl font-semibold leading-tight tracking-[-0.03em]">{isPremium ? "Premium desbloqueado!" : pending ? "Seu pagamento Pix" : reason === "photos" ? "Quer adicionar mais momentos? ❤️" : "Todos os detalhes do seu amor."}</h2>
+      <h2 id="premium-checkout-title" className="mt-5 font-serif text-3xl font-semibold leading-tight tracking-[-0.03em]">{isPremium ? "Premium desbloqueado!" : pending ? "Seu pagamento Pix" : reason === "photos" ? "Quer adicionar mais momentos? ❤️" : reason === "vouchers" ? "Presentes para viver a dois." : reason === "wheel" ? "Deixe o amor decidir." : "Todos os detalhes do seu amor."}</h2>
       {isPremium ? <div className="mt-6 rounded-3xl border border-[#cedec7] bg-[#f0f6ed] p-6 text-center" role="status">
-        <p className="text-3xl" aria-hidden="true">❤️</p><p className="mt-3 font-semibold text-[#4b6c42]">Pagamento confirmado ❤️</p><p className="mt-2 text-sm leading-6 text-[#657d5e]">Quiz do casal e até 6 fotos liberados. Sua edição está salva e pronta para continuar.</p>
+        <p className="text-3xl" aria-hidden="true">❤️</p><p className="mt-3 font-semibold text-[#4b6c42]">Pagamento confirmado ❤️</p><p className="mt-2 text-sm leading-6 text-[#657d5e]">Quiz, Vales do Amor, Roleta e até 6 fotos liberados. Sua edição está salva e pronta para continuar.</p>
         <button type="button" onClick={onClose} className={`${buttonClass} mt-5`}>Continuar minha cartinha</button>
       </div> : <>
         {!pending && <><p className="mt-3 text-sm leading-6 text-[#8c6774]">Desbloqueie todos os recursos Premium desta cartinha por apenas {PREMIUM_PRICE_LABEL}.</p>
-        <ul className="mt-4 space-y-2 text-sm text-[#704657]"><li>♡ Quiz do casal</li><li>♡ Mais de 2 fotos — até 6 no carrossel</li><li>♡ Experiência completa</li></ul></>}
+        <ul className="mt-4 space-y-2 text-sm text-[#704657]"><li>♡ Quiz do casal</li><li>♡ Vales do Amor com resgates</li><li>♡ Roleta do Amor interativa</li><li>♡ Mais de 2 fotos — até 6 no carrossel</li><li>♡ Cartinha disponível para sempre</li></ul></>}
         <div className={`${pending ? "my-4" : "my-6"} rounded-2xl border border-[#e5d3db] bg-white p-4 text-center`}><p className="font-serif text-4xl font-semibold">{PREMIUM_PRICE_LABEL}</p><p className="mt-1 text-xs text-[#967481]">Compra única para esta cartinha. Sem assinatura.</p></div>
         {payment && <p role="status" className={`mb-4 rounded-xl px-4 py-3 text-center text-sm font-semibold ${pending ? "bg-[#f7eee1] text-[#92724a]" : "bg-[#f8e9ee] text-[#99566d]"}`}>{paymentLabels[payment.status]}</p>}
         {pending && payment?.qrCode ? <div className="text-center">

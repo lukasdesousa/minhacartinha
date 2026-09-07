@@ -35,6 +35,9 @@ test("terceira foto convida ao Premium e preserva fotos no celular", async ({ pa
   await page.screenshot({ path: "test-results/escolha-plano-mobile.png", fullPage: true });
   await page.getByRole("button", { name: "Criar cartinha grátis" }).click();
   await page.getByRole("navigation", { name: "Etapas de criação" }).getByRole("button", { name: /Fotos/ }).click();
+  await expect(page.getByLabel("Incluir nosso lugar favorito")).toBeChecked();
+  await page.getByLabel("Incluir nosso lugar favorito").uncheck({ force: true });
+  await expect(page.getByLabel("Nome desse lugar")).toHaveCount(0);
   const galleryInput = page.locator('input[type="file"][multiple]');
   await galleryInput.setInputFiles([1, 2, 3].map((n) => ({ name: `momento-${n}.png`, mimeType: "image/png", buffer: Buffer.from(png, "base64") })));
   await expect(page.getByText("Premium escolhido. O Pix de R$ 7,90 será gerado somente na revisão final.")).toBeVisible();
@@ -92,6 +95,37 @@ test("Quiz mantém edição durante Pix e após recarregar; confirmação libera
   await expect(preview.getByText(/Acertou! Essa lembrança/)).toBeVisible();
   await preview.getByRole("button", { name: "Ver nosso resultado" }).click();
   await expect(preview.getByText("1/1", { exact: true })).toBeVisible();
+});
+
+test("Vales e Roleta aparecem como Premium e preservam a edição ao trocar de plano", async ({ page }) => {
+  await mockCheckout(page);
+  await page.goto("/criar");
+  await page.getByRole("button", { name: "Criar cartinha grátis" }).click();
+  await page.getByRole("navigation", { name: "Etapas de criação" }).getByRole("button", { name: /Estilo/ }).click();
+  const vouchersSection = page.locator('section[aria-labelledby="vouchers-title"]');
+  const wheelSection = page.locator('section[aria-labelledby="wheel-title"]');
+  await expect(vouchersSection.getByText(/faz parte do Premium/)).toBeVisible();
+  await expect(wheelSection.getByText(/faz parte do Premium/)).toBeVisible();
+  await vouchersSection.getByRole("button", { name: "Escolher Premium — R$ 7,90" }).click();
+  await vouchersSection.getByLabel("Incluir Vales do Amor nesta cartinha").check();
+  await vouchersSection.getByLabel("Título").fill("Vale um café na cama");
+  await wheelSection.getByLabel("Incluir Roleta do Amor nesta cartinha").check();
+  await wheelSection.getByLabel("Título da roleta").fill("O que faremos hoje?");
+  await wheelSection.getByLabel("Título", { exact: true }).nth(0).fill("Noite de filmes");
+  await wheelSection.getByLabel("Título", { exact: true }).nth(1).fill("Piquenique");
+  await wheelSection.getByRole("button", { name: "Testar roleta" }).click();
+  await expect(wheelSection.getByText(/A prévia escolheu:/)).toBeVisible();
+  await page.getByRole("button", { name: "Trocar plano" }).click();
+  await page.getByRole("button", { name: "Criar cartinha grátis" }).click();
+  await page.getByRole("navigation", { name: "Etapas de criação" }).getByRole("button", { name: /Estilo/ }).click();
+  await expect(vouchersSection.getByLabel("Incluir Vales do Amor nesta cartinha")).toHaveCount(0);
+  await vouchersSection.getByRole("button", { name: "Escolher Premium — R$ 7,90" }).click();
+  await vouchersSection.getByLabel("Incluir Vales do Amor nesta cartinha").check();
+  await expect(vouchersSection.getByLabel("Título")).toHaveValue("Vale um café na cama");
+  await wheelSection.getByLabel("Incluir Roleta do Amor nesta cartinha").check();
+  await expect(wheelSection.getByLabel("Título da roleta")).toHaveValue("O que faremos hoje?");
+  await expect(wheelSection.getByLabel("Título", { exact: true }).nth(0)).toHaveValue("Noite de filmes");
+  await expect(wheelSection.getByLabel("Título", { exact: true }).nth(1)).toHaveValue("Piquenique");
 });
 
 for (const count of [0, 1, 2]) {

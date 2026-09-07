@@ -1,6 +1,12 @@
 import { getCanonicalSpotifyUrl } from "@/lib/spotify";
 import { parseQuiz, type QuizQuestion } from "@/lib/letters/quiz";
 import { MAX_GALLERY_PHOTOS } from "@/lib/premium";
+import {
+  parseLoveVouchers,
+  parseLoveWheelOptions,
+  type LoveVoucherInput,
+  type LoveWheelOptionInput,
+} from "@/lib/letters/romantic-features";
 
 const MAX_IMAGE_BYTES = 400_000;
 const MAX_TOTAL_IMAGE_BYTES = 3_200_000;
@@ -20,6 +26,11 @@ export type ValidatedLetterImage = {
 export type ValidatedLetterInput = {
   quizEnabled: boolean;
   quiz: QuizQuestion[];
+  vouchersEnabled: boolean;
+  vouchers: LoveVoucherInput[];
+  loveWheelEnabled: boolean;
+  loveWheelTitle: string;
+  loveWheelOptions: LoveWheelOptionInput[];
   recipientName: string;
   recipientEmail: string;
   senderName: string;
@@ -31,6 +42,7 @@ export type ValidatedLetterInput = {
   closingText: string;
   favoritePlaceName: string | null;
   favoritePlaceCaption: string | null;
+  showFavoritePlace: boolean;
   songTitle: string | null;
   songArtist: string | null;
   spotifyUrl: string | null;
@@ -234,17 +246,16 @@ export function parseLetterPayload(value: unknown): ValidatedLetterInput {
     images.push(image);
   });
 
-  const favoritePlaceCaption = optionalText(
-    favoritePlace.caption,
-    "A descrição do lugar favorito",
-    180,
-  );
-  const favoritePlaceImage = decodeImage(
-    favoritePlace.image,
-    "FAVORITE_PLACE",
-    0,
-    favoritePlaceCaption,
-  );
+  if (value.showFavoritePlace !== undefined && typeof value.showFavoritePlace !== "boolean") {
+    throw new LetterValidationError("A exibição do lugar favorito é inválida.");
+  }
+  const showFavoritePlace = value.showFavoritePlace !== false;
+  const favoritePlaceCaption = showFavoritePlace
+    ? optionalText(favoritePlace.caption, "A descrição do lugar favorito", 180)
+    : null;
+  const favoritePlaceImage = showFavoritePlace
+    ? decodeImage(favoritePlace.image, "FAVORITE_PLACE", 0, favoritePlaceCaption)
+    : null;
   if (favoritePlaceImage) images.push(favoritePlaceImage);
 
   const totalImageBytes = images.reduce((total, image) => total + image.size, 0);
@@ -263,9 +274,35 @@ export function parseLetterPayload(value: unknown): ValidatedLetterInput {
     throw new LetterValidationError(error instanceof Error ? error.message : "O Quiz é inválido.");
   }
 
+  if (value.vouchersEnabled !== undefined && typeof value.vouchersEnabled !== "boolean") {
+    throw new LetterValidationError("A configuração dos Vales do Amor é inválida.");
+  }
+  if (value.loveWheelEnabled !== undefined && typeof value.loveWheelEnabled !== "boolean") {
+    throw new LetterValidationError("A configuração da Roleta do Amor é inválida.");
+  }
+  const vouchersEnabled = value.vouchersEnabled === true;
+  const loveWheelEnabled = value.loveWheelEnabled === true;
+  let vouchers: LoveVoucherInput[];
+  let loveWheelOptions: LoveWheelOptionInput[];
+  try {
+    vouchers = parseLoveVouchers(value.vouchers ?? [], vouchersEnabled);
+    loveWheelOptions = parseLoveWheelOptions(value.loveWheelOptions ?? [], loveWheelEnabled);
+  } catch (error) {
+    throw new LetterValidationError(error instanceof Error ? error.message : "Os recursos românticos são inválidos.");
+  }
+
   return {
     quizEnabled,
     quiz,
+    vouchersEnabled,
+    vouchers,
+    loveWheelEnabled,
+    loveWheelTitle: loveWheelEnabled
+      ? value.loveWheelTitle === undefined
+        ? "Roleta do Amor"
+        : requiredText(value, "loveWheelTitle", "O título da Roleta do Amor", 80)
+      : optionalText(value.loveWheelTitle, "O título da Roleta do Amor", 80) ?? "Roleta do Amor",
+    loveWheelOptions,
     recipientName: requiredText(value, "recipientName", "O nome de quem recebe", 40),
     recipientEmail: recipientEmailValue(value.recipientEmail),
     senderName: requiredText(value, "senderName", "Seu nome", 40),
@@ -275,8 +312,11 @@ export function parseLetterPayload(value: unknown): ValidatedLetterInput {
     relationshipStartedAt: relationshipStartedAtValue(value.relationshipStartedAt),
     openingText: requiredText(value, "openingText", "A frase de abertura", 70),
     closingText: requiredText(value, "closingText", "A frase final", 100),
-    favoritePlaceName: optionalText(favoritePlace.name, "O lugar favorito", 60),
+    favoritePlaceName: showFavoritePlace
+      ? optionalText(favoritePlace.name, "O lugar favorito", 60)
+      : null,
     favoritePlaceCaption,
+    showFavoritePlace,
     songTitle: optionalText(song.title, "O nome da música", 60),
     songArtist: optionalText(song.artist, "O artista", 70),
     spotifyUrl: spotifyUrlValue(song.spotifyUrl),

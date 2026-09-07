@@ -45,10 +45,17 @@ export default async function PublicLetterPage({ params }: PageProps<"/c/[slug]"
   const gallery = letter.premiumStatus === "PREMIUM" || letter.premiumRulesVersion === 0
     ? allGallery : allGallery.slice(0, FREE_GALLERY_LIMIT);
   const quizEnabled = letter.premiumStatus === "PREMIUM" && letter.quizEnabled;
+  const vouchersEnabled = letter.premiumStatus === "PREMIUM" && letter.vouchersEnabled;
+  const loveWheelEnabled = letter.premiumStatus === "PREMIUM" && letter.loveWheelEnabled;
 
   const publicLetter: PublicLetterData = {
     quizEnabled,
     quiz: quizEnabled ? parseQuiz(letter.quiz ?? [], true) : [],
+    vouchersEnabled,
+    vouchers: vouchersEnabled ? letter.vouchers.map((voucher) => ({ ...voucher, description: voucher.description ?? "" })) : [],
+    loveWheelEnabled,
+    loveWheelTitle: letter.loveWheel?.title ?? "Roleta do Amor",
+    loveWheelOptions: loveWheelEnabled ? (letter.loveWheel?.options ?? []).map((option) => ({ ...option, description: option.description ?? "" })) : [],
     slug: letter.slug,
     recipientName: letter.recipientName,
     senderName: letter.senderName,
@@ -69,6 +76,7 @@ export default async function PublicLetterPage({ params }: PageProps<"/c/[slug]"
       caption: letter.favoritePlaceCaption ?? "",
       image: favoritePlaceImage?.secureUrl ?? "",
     },
+    showFavoritePlace: letter.showFavoritePlace,
     song: {
       title: letter.songTitle ?? "",
       artist: letter.songArtist ?? "",

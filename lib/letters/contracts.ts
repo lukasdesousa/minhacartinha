@@ -20,9 +20,28 @@ export type PublicGalleryPhoto = {
   caption: string;
 };
 
+export type PublicLoveVoucher = {
+  id: string;
+  title: string;
+  description: string;
+  totalUses: number | null;
+  usedCount: number;
+};
+
+export type PublicLoveWheelOption = {
+  id: string;
+  title: string;
+  description: string;
+};
+
 export type PublicLetterData = {
   quizEnabled: boolean;
   quiz: QuizQuestion[];
+  vouchersEnabled: boolean;
+  vouchers: PublicLoveVoucher[];
+  loveWheelEnabled: boolean;
+  loveWheelTitle: string;
+  loveWheelOptions: PublicLoveWheelOption[];
   slug: string;
   recipientName: string;
   senderName: string;
@@ -39,6 +58,7 @@ export type PublicLetterData = {
     caption: string;
     image: string;
   };
+  showFavoritePlace: boolean;
   song: {
     title: string;
     artist: string;

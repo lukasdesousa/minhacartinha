@@ -4,6 +4,7 @@ import type { Payment, Prisma } from "@/generated/prisma/client";
 import type { OrderResponse } from "mercadopago/dist/clients/order/commonTypes";
 import { requireLetterOwner } from "@/lib/letters/ownership";
 import { withPrisma } from "@/lib/prisma";
+import { getLetterExpirationAt } from "@/lib/letters/expiration";
 import { ANIMAL_CAUSE_RATE_BPS, getPaymentConfig, PAYMENT_POLL_INTERVAL_MS, PaymentError, PREMIUM_PRICE_CENTS } from "./config";
 import { mercadoPago, pixPaymentBody } from "./mercado-pago";
 import { grantsPremium, isActivePayment, mayApplySnapshot, orderStatus, validateDirectPaymentSnapshot, validateOrderIdentity, validatePaymentSnapshot } from "./policy";
@@ -25,9 +26,25 @@ async function lockLetter(tx: Prisma.TransactionClient, letterId: string) {
 }
 
 async function refreshPremiumStatus(tx: Prisma.TransactionClient, letterId: string) {
+  const letter = await tx.letter.findUniqueOrThrow({
+    where: { id: letterId },
+    select: { status: true, expiresAt: true },
+  });
   const paid = await tx.payment.findFirst({ where: { letterId, status: "APPROVED", refundedAmountCents: 0 }, select: { id: true } });
   const pending = paid ? null : await tx.payment.findFirst({ where: { activeLetterId: letterId }, select: { id: true } });
-  return tx.letter.update({ where: { id: letterId }, data: { premiumStatus: paid ? "PREMIUM" : pending ? "PAYMENT_PENDING" : "FREE" } });
+  const premiumStatus = paid ? "PREMIUM" : pending ? "PAYMENT_PENDING" : "FREE";
+  const expiresAt = paid
+    ? null
+    : letter.status === "PUBLISHED"
+      ? letter.expiresAt ?? getLetterExpirationAt(premiumStatus, new Date())
+      : undefined;
+  return tx.letter.update({
+    where: { id: letterId },
+    data: {
+      premiumStatus,
+      expiresAt,
+    },
+  });
 }
 
 async function reservePayment(request: Request, letterId: string, payerEmail: string) {
@@ -75,7 +92,7 @@ async function applyOrder(payment: Payment, order: OrderResponse) {
   const financial = needsFinancialReconciliation && referenceId && /^\d+$/.test(referenceId) ? await financialPayments.get({ id: referenceId }) : null;
   const snapshot = validatePaymentSnapshot(order, financial, payment, configuration.collectorId);
   const result = await withPrisma((prisma) => prisma.$transaction(async (tx) => {
-    await lockLetter(tx, payment.letterId);
+    if (payment.letterId) await lockLetter(tx, payment.letterId);
     const current = await tx.payment.findUniqueOrThrow({ where: { id: payment.id } });
     if (!mayApplySnapshot(current, snapshot)) return current;
     const updated = await tx.payment.update({ where: { id: payment.id }, data: {
@@ -92,7 +109,7 @@ async function applyOrder(payment: Payment, order: OrderResponse) {
       lastSyncedAt: new Date(),
       lastErrorCode: null,
     } });
-    await refreshPremiumStatus(tx, payment.letterId);
+    if (current.letterId) await refreshPremiumStatus(tx, current.letterId);
     if (current.status !== updated.status) paymentLog("status_changed", payment.id, updated.status);
     return updated;
   }));
@@ -103,7 +120,7 @@ async function applyFinancialPayment(payment: Payment, financial: Awaited<Return
   const { configuration } = mercadoPago();
   const snapshot = validateDirectPaymentSnapshot(financial, payment, configuration.collectorId);
   return withPrisma((prisma) => prisma.$transaction(async (tx) => {
-    await lockLetter(tx, payment.letterId);
+    if (payment.letterId) await lockLetter(tx, payment.letterId);
     const current = await tx.payment.findUniqueOrThrow({ where: { id: payment.id } });
     if (!mayApplySnapshot(current, snapshot)) return current;
     const updated = await tx.payment.update({ where: { id: payment.id }, data: {
@@ -120,7 +137,7 @@ async function applyFinancialPayment(payment: Payment, financial: Awaited<Return
       lastSyncedAt: new Date(),
       lastErrorCode: null,
     } });
-    await refreshPremiumStatus(tx, payment.letterId);
+    if (current.letterId) await refreshPremiumStatus(tx, current.letterId);
     if (current.status !== updated.status) paymentLog("status_changed", payment.id, updated.status);
     return updated;
   }));
@@ -146,14 +163,16 @@ async function createProviderPayment(payment: Payment) {
     // An ambiguous timeout stays on the SAME persisted idempotency key for safe recovery.
     const code = safePaymentErrorCode(error);
     await withPrisma((prisma) => prisma.$transaction(async (tx) => {
-      await lockLetter(tx, payment.letterId);
+      if (payment.letterId) await lockLetter(tx, payment.letterId);
       const current = await tx.payment.findUniqueOrThrow({ where: { id: payment.id } });
       const rejectedBeforeCreation = !current.providerOrderId && !current.providerPaymentId && error instanceof MercadoPagoError && [400, 422].includes(error.status);
       await tx.payment.update({ where: { id: payment.id }, data: {
         lastErrorCode: code,
         ...(rejectedBeforeCreation ? { status: "REJECTED", activeLetterId: null } : {}),
       } });
-      if (rejectedBeforeCreation) await refreshPremiumStatus(tx, payment.letterId);
+      if (rejectedBeforeCreation && current.letterId) {
+        await refreshPremiumStatus(tx, current.letterId);
+      }
     }));
     paymentLog("creation_retry_required", payment.id, code);
     throw error instanceof PaymentError ? error : new PaymentError("Não foi possível preparar o Pix agora. Sua edição está salva; tente novamente em instantes.");

@@ -27,11 +27,13 @@ function draftData(value: unknown): Prisma.InputJsonObject {
   if (typeof input.website === "string" && input.website.trim()) throw new RequestBodyError("Não foi possível validar este envio.", 422);
   // Only editable content is saved here. Ownership, payment and publication state
   // are never accepted from a browser snapshot. Publication validates all fields.
-  const allowed = ["recipientName", "recipientEmail", "senderName", "title", "message", "signature", "relationshipStartedAt", "openingText", "closingText", "heroImage", "gallery", "favoritePlace", "song", "themeId", "showRelationshipTime", "showMusic", "website", "quiz", "quizEnabled"];
+  const allowed = ["recipientName", "recipientEmail", "senderName", "title", "message", "signature", "relationshipStartedAt", "openingText", "closingText", "heroImage", "gallery", "favoritePlace", "showFavoritePlace", "song", "themeId", "showRelationshipTime", "showMusic", "website", "quiz", "quizEnabled", "vouchers", "vouchersEnabled", "loveWheelTitle", "loveWheelOptions", "loveWheelEnabled"];
   const clean: Record<string, unknown> = {};
   for (const key of allowed) if (Object.hasOwn(input, key)) clean[key] = input[key];
   if (Array.isArray(clean.gallery) && clean.gallery.length > 6) throw new RequestBodyError("Adicione no máximo 6 fotos ao carrossel.", 422);
   if (Array.isArray(clean.quiz) && clean.quiz.length > 20) throw new RequestBodyError("Adicione no máximo 20 perguntas.", 422);
+  if (Array.isArray(clean.vouchers) && clean.vouchers.length > 10) throw new RequestBodyError("Adicione no máximo 10 Vales do Amor.", 422);
+  if (Array.isArray(clean.loveWheelOptions) && clean.loveWheelOptions.length > 12) throw new RequestBodyError("Adicione no máximo 12 opções à Roleta do Amor.", 422);
   return clean as Prisma.InputJsonObject;
 }
 

@@ -8,6 +8,10 @@ export const getPublishedLetterBySlug = cache(async (slug: string) => {
       where: {
         slug,
         status: LetterStatus.PUBLISHED,
+        OR: [
+          { premiumStatus: "PREMIUM" },
+          { expiresAt: { gt: new Date() } },
+        ],
       },
       select: {
         slug: true,
@@ -21,6 +25,7 @@ export const getPublishedLetterBySlug = cache(async (slug: string) => {
         closingText: true,
         favoritePlaceName: true,
         favoritePlaceCaption: true,
+        showFavoritePlace: true,
         songTitle: true,
         songArtist: true,
         spotifyUrl: true,
@@ -31,6 +36,21 @@ export const getPublishedLetterBySlug = cache(async (slug: string) => {
         premiumRulesVersion: true,
         quizEnabled: true,
         quiz: true,
+        vouchersEnabled: true,
+        loveWheelEnabled: true,
+        vouchers: {
+          select: { id: true, title: true, description: true, totalUses: true, usedCount: true },
+          orderBy: { position: "asc" },
+        },
+        loveWheel: {
+          select: {
+            title: true,
+            options: {
+              select: { id: true, title: true, description: true },
+              orderBy: { position: "asc" },
+            },
+          },
+        },
         images: {
           select: {
             id: true,

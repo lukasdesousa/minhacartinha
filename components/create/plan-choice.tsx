@@ -33,7 +33,7 @@ export function PlanChoice({ onChoose, hasDraft = false }: {
             <h2 className="mt-3 font-serif text-4xl font-semibold text-[#4d2230]">Uma surpresa completa</h2>
             <p className="mt-3 text-sm leading-6 text-[#856e76]">Tudo o que você precisa para criar, publicar e compartilhar sua cartinha.</p>
             <ul className="mt-6 flex-1 space-y-3 text-sm text-[#684b55]">
-              {["Mensagem personalizada, nomes e data", "Até 2 fotos no carrossel", "Link exclusivo, QR Code da cartinha e compartilhamento"].map((item) => <li key={item} className="flex gap-3"><CheckIcon className="mt-0.5 size-4 shrink-0 text-[#68805e]" aria-hidden="true" />{item}</li>)}
+              {["Mensagem personalizada, nomes e data", "Até 2 fotos no carrossel", "Link exclusivo, QR Code da cartinha e compartilhamento", "Disponível por 2 dias após a publicação"].map((item) => <li key={item} className="flex gap-3"><CheckIcon className="mt-0.5 size-4 shrink-0 text-[#68805e]" aria-hidden="true" />{item}</li>)}
             </ul>
             <button type="button" onClick={() => onChoose("FREE")} className="mt-8 min-h-12 rounded-full border border-[#ccb9bf] bg-white px-5 text-sm font-bold text-[#713b4d] transition hover:bg-[#fbf2f5] focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[#963b57]">
               Criar cartinha grátis
@@ -46,7 +46,7 @@ export function PlanChoice({ onChoose, hasDraft = false }: {
             <div className="mt-3 flex items-end gap-2"><h2 className="font-serif text-4xl font-semibold">{PREMIUM_PRICE_LABEL}</h2><span className="pb-1 text-xs text-white/65">por cartinha</span></div>
             <p className="mt-1 text-xs font-semibold text-white/72">Compra única. Sem assinatura.</p>
             <ul className="mt-6 flex-1 space-y-3 text-sm text-white/86">
-              {["Tudo do plano Grátis", "Quiz do casal completo", "Até 6 fotos no carrossel", "Todos os recursos Premium da cartinha"].map((item) => <li key={item} className="flex gap-3"><CheckIcon className="mt-0.5 size-4 shrink-0 text-[#f2c2cf]" aria-hidden="true" />{item}</li>)}
+              {["Tudo do plano Grátis, sem a expiração", "Quiz do casal completo", "Vales do Amor personalizados", "Roleta do Amor interativa", "Até 6 fotos no carrossel", "Cartinha disponível para sempre"].map((item) => <li key={item} className="flex gap-3"><CheckIcon className="mt-0.5 size-4 shrink-0 text-[#f2c2cf]" aria-hidden="true" />{item}</li>)}
             </ul>
             <button type="button" onClick={() => onChoose("PREMIUM")} className="mt-8 min-h-12 rounded-full bg-white px-5 text-sm font-bold text-[#76243d] shadow-lg transition hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-white">
               Criar cartinha Premium

@@ -62,6 +62,8 @@ model Letter {
   premiumRulesVersion   Int                  @default(1)
   quiz                  Json?
   quizEnabled           Boolean              @default(false)
+  vouchersEnabled       Boolean              @default(false)
+  loveWheelEnabled      Boolean              @default(false)
   draftData             Json?
   publicationClaim      String?              @db.VarChar(36)
   publicationClaimedAt  DateTime?
@@ -76,6 +78,7 @@ model Letter {
   closingText           String               @db.VarChar(100)
   favoritePlaceName     String?              @db.VarChar(60)
   favoritePlaceCaption  String?              @db.VarChar(180)
+  showFavoritePlace     Boolean              @default(true)
   songTitle             String?              @db.VarChar(60)
   songArtist            String?              @db.VarChar(70)
   spotifyUrl            String?              @db.VarChar(300)
@@ -84,6 +87,7 @@ model Letter {
   showMusic             Boolean              @default(true)
   status                LetterStatus         @default(DRAFT)
   publishedAt           DateTime?
+  expiresAt             DateTime?
   emailStatus           EmailDeliveryStatus?
   emailMessageId        String?              @db.VarChar(100)
   emailSentAt           DateTime?
@@ -93,14 +97,60 @@ model Letter {
   updatedAt             DateTime             @updatedAt
   images                LetterImage[]
   payments              Payment[]
+  vouchers              LoveVoucher[]
+  loveWheel             LoveWheel?
 
   @@index([status, createdAt])
+  @@index([status, premiumStatus, expiresAt])
   @@map("letters")
+}
+
+model LoveVoucher {
+  id          String   @id @default(cuid())
+  letterId    String
+  title       String   @db.VarChar(80)
+  description String?  @db.VarChar(180)
+  position    Int
+  totalUses   Int?
+  usedCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  letter      Letter   @relation(fields: [letterId], references: [id], onDelete: Cascade)
+
+  @@index([letterId, position])
+  @@map("love_vouchers")
+}
+
+model LoveWheel {
+  id             String            @id @default(cuid())
+  letterId       String            @unique
+  title          String            @default("Roleta do Amor") @db.VarChar(80)
+  usageLimit     Int?
+  spinsUsed      Int               @default(0)
+  removeSelected Boolean           @default(false)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  letter         Letter            @relation(fields: [letterId], references: [id], onDelete: Cascade)
+  options        LoveWheelOption[]
+
+  @@map("love_wheels")
+}
+
+model LoveWheelOption {
+  id          String    @id @default(cuid())
+  wheelId     String
+  title       String    @db.VarChar(80)
+  description String?   @db.VarChar(180)
+  position    Int
+  wheel       LoveWheel @relation(fields: [wheelId], references: [id], onDelete: Cascade)
+
+  @@unique([wheelId, position])
+  @@map("love_wheel_options")
 }
 
 model Payment {
   id                   String          @id @default(uuid()) @db.VarChar(36)
-  letterId             String
+  letterId             String?
   // Nullable unique key keeps one active attempt per letter, across servers.
   activeLetterId       String?         @unique
   externalReference    String          @unique @db.VarChar(64)
@@ -131,7 +181,7 @@ model Payment {
   allocationRateBps    Int             @default(1500)
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
-  letter               Letter          @relation(fields: [letterId], references: [id], onDelete: Restrict)
+  letter               Letter?         @relation(fields: [letterId], references: [id], onDelete: SetNull)
 
   @@index([letterId, createdAt])
   @@index([status, liveMode, approvedAt])
@@ -185,4 +235,16 @@ model LetterImage {
 
   @@index([letterId, role, position])
   @@map("letter_images")
+}
+
+model CloudinaryDeletion {
+  id            String    @id @default(cuid())
+  publicId      String    @unique @db.VarChar(255)
+  attempts      Int       @default(0)
+  lastError     String?   @db.VarChar(500)
+  createdAt     DateTime  @default(now())
+  lastAttemptAt DateTime?
+
+  @@index([createdAt])
+  @@map("cloudinary_deletions")
 }

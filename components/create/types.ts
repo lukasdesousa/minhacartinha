@@ -1,4 +1,5 @@
 import type { QuizQuestion } from "@/lib/letters/quiz";
+import type { LoveVoucherInput, LoveWheelOptionInput } from "@/lib/letters/romantic-features";
 
 export const letterThemes = [
   {
@@ -64,6 +65,7 @@ export type LetterDraft = {
     caption: string;
     image: string;
   };
+  showFavoritePlace: boolean;
   song: {
     spotifyUrl: string;
   };
@@ -72,6 +74,11 @@ export type LetterDraft = {
   showMusic: boolean;
   quizEnabled: boolean;
   quiz: QuizQuestion[];
+  vouchersEnabled: boolean;
+  vouchers: LoveVoucherInput[];
+  loveWheelEnabled: boolean;
+  loveWheelTitle: string;
+  loveWheelOptions: LoveWheelOptionInput[];
   website: string;
 };
 
@@ -93,6 +100,7 @@ export const initialLetterDraft: LetterDraft = {
     caption: "Onde o tempo desacelera e tudo fica mais bonito com você.",
     image: "",
   },
+  showFavoritePlace: true,
   song: {
     spotifyUrl: "",
   },
@@ -101,6 +109,11 @@ export const initialLetterDraft: LetterDraft = {
   showMusic: true,
   quizEnabled: false,
   quiz: [],
+  vouchersEnabled: false,
+  vouchers: [],
+  loveWheelEnabled: false,
+  loveWheelTitle: "Roleta do nosso amor",
+  loveWheelOptions: [],
   website: "",
 };
 

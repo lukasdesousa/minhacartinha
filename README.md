@@ -2,7 +2,7 @@
 
 Aplicação em Next.js para criar e compartilhar cartinhas digitais personalizadas. O editor permite escrever a história, adicionar fotos, escolher o tema e publicar uma página exclusiva.
 
-Grátis com até 2 fotos no carrossel. Premium por **R$ 7,90 em compra única por cartinha**, com Quiz do casal e até 6 fotos, pago por Pix dentro do site. A iniciativa da causa animal e os repasses comprovados ficam em `/transparencia`.
+Grátis com até 2 fotos no carrossel e validade de 2 dias após a publicação. Premium por **R$ 7,90 em compra única por cartinha**, sem expiração, com Quiz do casal, Vales do Amor, Roleta do Amor e até 6 fotos, pago por Pix dentro do site. A iniciativa da causa animal e os repasses comprovados ficam em `/transparencia`.
 
 Configuração e operação: [Premium, Pix e webhook](docs/premium-pix.md) e [cálculo dos 15% e cadastro de comprovantes](docs/transparency.md).
 
@@ -60,6 +60,8 @@ npm run cf-typegen   # atualiza os tipos dos bindings Cloudflare
 ## Deploy na Cloudflare
 
 O projeto usa o caminho atualmente recomendado pela Cloudflare para Next.js 16: `vinext` sobre Cloudflare Workers. A configuração principal está em `wrangler.jsonc`; o build gera a configuração publicável em `dist/server/wrangler.json`.
+
+Um Cron Trigger executa a cada 15 minutos. O link de uma cartinha grátis deixa de responder exatamente 48 horas após a publicação; no ciclo seguinte, a carta é removida do PostgreSQL e suas imagens entram em uma fila transacional de exclusão do Cloudinary. Falhas do Cloudinary permanecem na fila para nova tentativa automática. Cartinhas Premium não recebem data de expiração.
 
 Requisitos do ambiente de deploy:
 

@@ -17,6 +17,7 @@ import { PlanChoice } from "@/components/create/plan-choice";
 import { readSavedDraft, saveDraft, type SavedDraft } from "@/components/create/draft-storage";
 import { FREE_GALLERY_LIMIT, MAX_GALLERY_PHOTOS, PREMIUM_PRICE_LABEL, type CreationPlan, type PremiumStatus } from "@/lib/premium";
 import { getQuizError } from "@/lib/letters/quiz";
+import { getRomanticFeaturesError } from "@/lib/letters/romantic-features";
 
 function newIdentity() {
   return {
@@ -46,7 +47,7 @@ export function CreatorWorkspace() {
   const [selectedPlan, setSelectedPlan] = useState<CreationPlan | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
   const [planNotice, setPlanNotice] = useState("");
-  const [upgradeReason, setUpgradeReason] = useState<"quiz" | "photos" | "all">("all");
+  const [upgradeReason, setUpgradeReason] = useState<"quiz" | "photos" | "vouchers" | "wheel" | "all">("all");
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [storageError, setStorageError] = useState("");
   const [pendingGallery, setPendingGallery] = useState<GalleryPhoto[]>([]);
@@ -150,11 +151,17 @@ export function CreatorWorkspace() {
         pendingGalleryRef.current = excess;
         setPendingGallery(excess);
       }
-      return { ...current, gallery: current.gallery.slice(0, FREE_GALLERY_LIMIT), quizEnabled: false };
+      return {
+        ...current,
+        gallery: current.gallery.slice(0, FREE_GALLERY_LIMIT),
+        quizEnabled: false,
+        vouchersEnabled: false,
+        loveWheelEnabled: false,
+      };
     });
   }, []);
 
-  const choosePremiumFromFeature = useCallback((reason: "quiz" | "photos" | "all" = "all", photos?: GalleryPhoto[]) => {
+  const choosePremiumFromFeature = useCallback((reason: "quiz" | "photos" | "vouchers" | "wheel" | "all" = "all", photos?: GalleryPhoto[]) => {
     if (photos?.length) {
       pendingGalleryRef.current = photos;
       setPendingGallery(photos);
@@ -211,8 +218,10 @@ export function CreatorWorkspace() {
   async function publishLetter() {
     if (publishingRef.current || !identity) return;
     if (draft.quizEnabled && getQuizError(draft.quiz)) { setPublishError(getQuizError(draft.quiz)); return; }
+    const romanticError = getRomanticFeaturesError(draft);
+    if (romanticError) { setPublishError(romanticError); return; }
     if (selectedPlan === "PREMIUM" && !isPremium) { openFinalCheckout(); return; }
-    if (!isPremium && (draft.quizEnabled || draft.gallery.length > FREE_GALLERY_LIMIT)) {
+    if (!isPremium && (draft.quizEnabled || draft.vouchersEnabled || draft.loveWheelEnabled || draft.gallery.length > FREE_GALLERY_LIMIT)) {
       setPublishError("Esta cartinha usa recursos Premium. Escolha o Premium para continuar.");
       return;
     }

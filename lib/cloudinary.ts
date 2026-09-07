@@ -87,18 +87,29 @@ function uploadResult(result: UploadApiResponse): UploadedLetterImage {
 }
 
 export async function removeCloudinaryImages(publicIds: string[]) {
+  if (!publicIds.length) return { failedPublicIds: [] as string[] };
   const client = getCloudinaryClient();
-  const results = await Promise.allSettled(
-    publicIds.map((publicId) =>
-      client.uploader.destroy(publicId, {
-        resource_type: "image",
-        invalidate: true,
-      }),
-    ),
-  );
+  const failedPublicIds: string[] = [];
 
-  const failed = results.filter((result) => result.status === "rejected");
-  if (failed.length) {
-    console.error(`Não foi possível remover ${failed.length} imagem(ns) do Cloudinary.`);
+  for (let index = 0; index < publicIds.length; index += 100) {
+    const batch = publicIds.slice(index, index + 100);
+    try {
+      const result = await client.api.delete_resources(batch, {
+        resource_type: "image",
+        type: "upload",
+        invalidate: true,
+      }) as { deleted?: Record<string, string> };
+      for (const publicId of batch) {
+        const status = result.deleted?.[publicId];
+        if (status !== "deleted" && status !== "not_found") failedPublicIds.push(publicId);
+      }
+    } catch {
+      failedPublicIds.push(...batch);
+    }
   }
+
+  if (failedPublicIds.length) {
+    console.error(`Não foi possível remover ${failedPublicIds.length} imagem(ns) do Cloudinary.`);
+  }
+  return { failedPublicIds };
 }

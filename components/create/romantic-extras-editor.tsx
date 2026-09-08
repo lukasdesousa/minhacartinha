@@ -76,7 +76,7 @@ function VoucherEditor({ draft, onChange }: { draft: LetterDraft; onChange: (pat
       {draft.vouchers.map((voucher, index) => <fieldset key={voucher.id} className="rounded-3xl border border-[#e5d6dc] bg-[#fffdfc] p-4 sm:p-5">
         <legend className="px-2 text-xs font-bold text-[#8a4860]">Vale {index + 1}</legend>
         <div className="grid gap-4">
-          <TextField label="Título" maxLength={80} placeholder="Vale um café na cama" value={voucher.title} onChange={(event) => update(voucher.id, { title: event.target.value })} />
+          <TextField label="Título" maxLength={80} placeholder="Vale Pix de R$100,00 🤑" value={voucher.title} onChange={(event) => update(voucher.id, { title: event.target.value })} />
           <TextAreaField label="Descrição (opcional)" maxLength={180} rows={2} placeholder="Use quando quiser começar o dia com carinho." value={voucher.description} onChange={(event) => update(voucher.id, { description: event.target.value })} />
           <label className="text-sm font-semibold text-[#59303d]">Quantidade de usos
             <select value={voucher.totalUses ?? "unlimited"} onChange={(event) => update(voucher.id, { totalUses: event.target.value === "unlimited" ? null : Number(event.target.value) as 1 | 2 | 3 })} className="mt-2 w-full rounded-2xl border border-[#ded1d4] bg-[#fffdfc] px-4 py-3.5 text-sm text-[#4f2835] outline-none focus:border-[#9b4961]">

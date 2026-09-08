@@ -12,10 +12,11 @@ import {
   type LoveWheelOptionInput,
 } from "@/lib/letters/romantic-features";
 import { PREMIUM_PRICE_LABEL } from "@/lib/premium";
+import { WheelVisual } from "@/components/letter/wheel-visual";
 
 const smallButton = "min-h-10 rounded-full border border-[#ddcbd1] px-3 text-xs font-semibold text-[#7d4255] hover:bg-[#f9ecef] disabled:opacity-35";
 
-function WheelEditorPreview({ title, options, background }: { title: string; options: LoveWheelOptionInput[]; background: string }) {
+function WheelEditorPreview({ title, options }: { title: string; options: LoveWheelOptionInput[] }) {
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState("");
@@ -38,7 +39,7 @@ function WheelEditorPreview({ title, options, background }: { title: string; opt
 
   return <div className="rounded-3xl border border-[#eadde1] bg-[#fff8fa] p-5 text-center">
     <p className="font-serif text-xl font-semibold text-[#572536]">{title || "Título da sua roleta"}</p>
-    <div className="relative mx-auto mt-5 w-fit"><span className="absolute left-1/2 top-[-10px] z-10 -translate-x-1/2 text-2xl text-[#572536]" aria-hidden="true">▼</span><div className="grid size-48 place-items-center rounded-full border-[10px] border-white shadow-[0_12px_30px_rgba(74,29,44,.16)]" style={{ background, transform: `rotate(${rotation}deg)`, transition: "transform 2.6s cubic-bezier(.12,.72,.12,1)" }}><span className="grid size-16 place-items-center rounded-full bg-white font-serif text-sm font-bold text-[#6f2b42]">Amor</span></div></div>
+    <div className="mt-5"><WheelVisual options={options} rotation={rotation} spinning={spinning} compact /></div>
     <button type="button" disabled={spinning || options.length < 2 || options.some((option) => !option.title.trim())} onClick={spinPreview} className="mt-5 min-h-10 rounded-full bg-[#8e2f4b] px-5 text-xs font-bold text-white disabled:opacity-45">{spinning ? "Girando..." : "Testar roleta"}</button>
     <p className="mt-3 min-h-5 text-xs font-semibold text-[#7d4255]" role="status">{result ? `A prévia escolheu: ${result}` : options.some((option) => !option.title.trim()) ? "Preencha as opções para testar." : "Resultado apenas para prévia."}</p>
   </div>;
@@ -51,9 +52,7 @@ function LockedFeature({ kind, onUpgrade }: { kind: "vouchers" | "wheel"; onUpgr
       <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#a1576d]">Vale do Amor</p>
       <p className="mt-2 font-serif text-xl font-semibold text-[#572536]">Vale um jantar escolhido por você</p>
       <p className="mt-2 text-xs text-[#8d6c78]">1 uso · exemplo</p>
-    </div> : <div className="mx-auto grid size-44 place-items-center rounded-full border-[10px] border-[#fff8fa] bg-[conic-gradient(#8e2f4b_0_25%,#d78da1_0_50%,#6d557b_0_75%,#e3b17e_0)] shadow-[0_12px_30px_rgba(74,29,44,.16)]">
-      <span className="grid size-16 place-items-center rounded-full bg-white font-serif text-sm font-bold text-[#6f2b42]">Roleta</span>
-    </div>}
+    </div> : <WheelVisual compact rotation={0} options={[{ id: "one", title: "Cinema" }, { id: "two", title: "Jantar" }, { id: "three", title: "Passeio" }, { id: "four", title: "Filme" }]} />}
     <p className="mt-4 text-sm leading-6 text-[#754f5e]">{vouchers ? "Crie vales personalizados para resgatar momentos a dois." : "Deixe a sorte escolher a próxima surpresa romântica."} Este recurso faz parte do Premium.</p>
     <button type="button" onClick={onUpgrade} className="mt-4 min-h-11 rounded-full bg-[#8e2f4b] px-5 text-xs font-bold text-white hover:bg-[#76243d]">Escolher Premium — {PREMIUM_PRICE_LABEL}</button>
   </div>;
@@ -96,9 +95,6 @@ function VoucherEditor({ draft, onChange }: { draft: LetterDraft; onChange: (pat
 function WheelEditor({ draft, onChange }: { draft: LetterDraft; onChange: (patch: Partial<LetterDraft>) => void }) {
   function update(id: string, patch: Partial<LoveWheelOptionInput>) { onChange({ loveWheelOptions: draft.loveWheelOptions.map((item) => item.id === id ? { ...item, ...patch } : item) }); }
   function move(index: number, direction: number) { const options = [...draft.loveWheelOptions]; [options[index], options[index + direction]] = [options[index + direction], options[index]]; onChange({ loveWheelOptions: options }); }
-  const optionCount = Math.max(1, draft.loveWheelOptions.length);
-  const colors = ["#8e2f4b", "#d78da1", "#6d557b", "#e3b17e", "#a96075", "#887099"];
-  const wheelBackground = `conic-gradient(${Array.from({ length: optionCount }, (_, index) => `${colors[index % colors.length]} ${index * 100 / optionCount}% ${(index + 1) * 100 / optionCount}%`).join(",")})`;
   return <>
     <label className="mt-5 flex min-h-12 cursor-pointer items-center gap-3 rounded-2xl border border-[#e4d3d9] bg-[#fff8fa] p-4 text-sm font-semibold text-[#633345]">
       <input type="checkbox" checked={draft.loveWheelEnabled} onChange={(event) => onChange({ loveWheelEnabled: event.target.checked, ...(event.target.checked && draft.loveWheelOptions.length < 2 ? { loveWheelOptions: [{ id: crypto.randomUUID(), title: "", description: "" }, { id: crypto.randomUUID(), title: "", description: "" }] } : {}) })} className="size-4 accent-[#8e2f4b]" />
@@ -106,7 +102,7 @@ function WheelEditor({ draft, onChange }: { draft: LetterDraft; onChange: (patch
     </label>
     {draft.loveWheelEnabled ? <div className="mt-5 space-y-4">
       <TextField label="Título da roleta" maxLength={80} placeholder="Roleta do nosso amor" value={draft.loveWheelTitle} onChange={(event) => onChange({ loveWheelTitle: event.target.value })} />
-      <WheelEditorPreview title={draft.loveWheelTitle} options={draft.loveWheelOptions} background={wheelBackground} />
+      <WheelEditorPreview title={draft.loveWheelTitle} options={draft.loveWheelOptions} />
       {draft.loveWheelOptions.map((option, index) => <fieldset key={option.id} className="rounded-3xl border border-[#e5d6dc] bg-[#fffdfc] p-4 sm:p-5"><legend className="px-2 text-xs font-bold text-[#8a4860]">Opção {index + 1}</legend><div className="grid gap-4"><TextField label="Título" maxLength={80} placeholder="Noite de filmes" value={option.title} onChange={(event) => update(option.id, { title: event.target.value })} /><TextAreaField label="Descrição (opcional)" maxLength={180} rows={2} placeholder="Com pipoca e o filme escolhido por nós." value={option.description} onChange={(event) => update(option.id, { description: event.target.value })} /></div><div className="mt-4 flex flex-wrap gap-2"><button type="button" className={smallButton} disabled={index === 0} onClick={() => move(index, -1)}>↑ Subir</button><button type="button" className={smallButton} disabled={index === draft.loveWheelOptions.length - 1} onClick={() => move(index, 1)}>↓ Descer</button><button type="button" className={`${smallButton} ml-auto`} disabled={draft.loveWheelOptions.length <= 2} onClick={() => onChange({ loveWheelOptions: draft.loveWheelOptions.filter((item) => item.id !== option.id) })}>Remover</button></div></fieldset>)}
       <button type="button" className={smallButton} disabled={draft.loveWheelOptions.length >= MAX_LOVE_WHEEL_OPTIONS} onClick={() => onChange({ loveWheelOptions: [...draft.loveWheelOptions, { id: crypto.randomUUID(), title: "", description: "" }] })}>+ Adicionar opção</button>
     </div> : null}

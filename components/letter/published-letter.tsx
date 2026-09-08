@@ -291,10 +291,6 @@ export function PublishedLetter({ letter }: PublishedLetterProps) {
         </p>
       </section>
 
-      <footer className="flex flex-col items-center justify-between gap-5 border-t border-[#e9dde0] bg-white px-5 py-8 text-center sm:flex-row sm:px-8 lg:px-10">
-        <Brand href="/" />
-        <p className="text-xs text-[#907981]">Uma história criada com carinho em Minha Cartinha.</p>
-      </footer>
     </main>
   );
 }

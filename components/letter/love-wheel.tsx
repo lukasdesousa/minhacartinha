@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PublicLoveWheelOption } from "@/lib/letters/contracts";
-
-const colors = ["#8e2f4b", "#d78da1", "#6d557b", "#e3b17e", "#a96075", "#887099"];
+import { WheelVisual, wheelColor } from "@/components/letter/wheel-visual";
 
 export function LoveWheel({ slug, title, options }: { slug: string; title: string; options: PublicLoveWheelOption[] }) {
   const [rotation, setRotation] = useState(0);
@@ -20,11 +19,6 @@ export function LoveWheel({ slug, title, options }: { slug: string; title: strin
     media.addEventListener("change", change);
     return () => media.removeEventListener("change", change);
   }, []);
-
-  const background = useMemo(
-    () => `conic-gradient(from -90deg, ${options.map((_, index) => `${colors[index % colors.length]} ${index * 100 / options.length}% ${(index + 1) * 100 / options.length}%`).join(",")})`,
-    [options],
-  );
 
   async function spin() {
     if (spinningRef.current) return;
@@ -52,30 +46,32 @@ export function LoveWheel({ slug, title, options }: { slug: string; title: strin
   }
 
   return (
-    <section className="overflow-hidden px-5 py-20 sm:px-8 sm:py-24" aria-labelledby="love-wheel-title">
+    <section className="overflow-hidden bg-[linear-gradient(180deg,var(--letter-paper),color-mix(in_srgb,var(--letter-wash)_55%,white))] px-5 py-20 sm:px-8 sm:py-24" aria-labelledby="love-wheel-title">
       <div className="mx-auto max-w-5xl text-center">
         <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--letter-muted)]">Uma surpresa do acaso</p>
         <h2 id="love-wheel-title" className="mt-3 font-serif text-4xl font-semibold text-[var(--letter-dark)] sm:text-5xl">{title}</h2>
         <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-[#7d5c67]">Cada opção tem a mesma chance. Toque para descobrir o próximo momento de vocês.</p>
       </div>
-      <div className="mx-auto mt-10 flex max-w-xl flex-col items-center">
-        <div className="relative">
-          <span className={`absolute left-1/2 top-[-15px] z-20 -translate-x-1/2 text-4xl text-[#542334] ${spinning && !reducedMotion ? "animate-bounce" : ""}`} aria-hidden="true">▼</span>
-          <div
-            className="relative size-[min(82vw,360px)] rounded-full border-[12px] border-[#fff8fa] shadow-[0_20px_55px_rgba(67,28,40,.2)]"
-            style={{ background, transform: `rotate(${rotation}deg)`, transition: reducedMotion ? "transform 100ms linear" : "transform 4.5s cubic-bezier(.12,.72,.12,1)" }}
-          >
-            {options.map((option, index) => {
-              const angle = (index + 0.5) * 360 / options.length;
-              return <span key={option.id} className="absolute left-1/2 top-1/2 w-[42%] origin-left text-left text-[10px] font-bold text-white drop-shadow sm:text-xs" style={{ transform: `rotate(${angle - 90}deg) translateX(18%)` }}><span className="block max-w-[105px] truncate">{option.title}</span></span>;
-            })}
-            <span className="absolute left-1/2 top-1/2 grid size-20 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-4 border-[#f5e5e9] bg-white font-serif font-bold text-[#6f2b42] shadow-md">Amor</span>
-          </div>
+      <div className="mx-auto mt-12 grid max-w-5xl items-center gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(320px,1.05fr)] lg:gap-14">
+        <div className="rounded-[2.5rem] border border-white/75 bg-white/45 px-4 py-10 shadow-[0_22px_60px_rgba(68,27,42,.08)] sm:px-8">
+          <WheelVisual options={options} rotation={rotation} spinning={spinning} reducedMotion={reducedMotion} />
+          <button type="button" disabled={spinning} onClick={() => void spin()} className="mx-auto mt-9 flex min-h-12 items-center justify-center rounded-full bg-[var(--letter-accent)] px-9 text-sm font-bold text-white shadow-[0_12px_28px_rgba(86,32,50,.22)] transition hover:-translate-y-0.5 hover:brightness-90 disabled:cursor-wait disabled:opacity-60">{spinning ? "Girando..." : "Girar a roleta"}</button>
         </div>
-        <button type="button" disabled={spinning} onClick={() => void spin()} className="mt-8 min-h-12 rounded-full bg-[#8e2f4b] px-8 text-sm font-bold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-[#76243d] disabled:cursor-wait disabled:opacity-60">{spinning ? "Girando..." : "Girar a roleta"}</button>
-        <div className="mt-6 min-h-24 text-center" role="status" aria-live="polite">
-          {result ? <div className="reveal rounded-3xl bg-[var(--letter-wash)] px-8 py-5"><p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[var(--letter-muted)]">A roleta escolheu</p><p className="mt-2 font-serif text-3xl font-semibold text-[#572536]">{result.title}</p>{result.description ? <p className="mt-2 text-sm leading-6 text-[#7d5c67]">{result.description}</p> : null}</div> : null}
-          {error ? <p className="text-sm font-semibold text-[#a23f58]">{error}</p> : null}
+
+        <div className="rounded-[2rem] border border-[#e8dce0] bg-white/75 p-6 shadow-[0_18px_50px_rgba(68,27,42,.07)] sm:p-8">
+          <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[var(--letter-muted)]">Possibilidades</p>
+          <ol className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            {options.map((option, index) => (
+              <li key={option.id} className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition ${result?.id === option.id ? "border-[var(--letter-accent)] bg-[var(--letter-wash)] shadow-sm" : "border-[#eee4e7] bg-white/70"}`}>
+                <span className="grid size-8 shrink-0 place-items-center rounded-full text-[10px] font-bold text-white shadow-sm" style={{ backgroundColor: wheelColor(index) }}>{index + 1}</span>
+                <span className="min-w-0 font-serif text-lg font-semibold leading-tight text-[var(--letter-dark)]">{option.title}</span>
+              </li>
+            ))}
+          </ol>
+          <div className="mt-6 min-h-28" role="status" aria-live="polite">
+            {result ? <div className="reveal rounded-3xl bg-[var(--letter-wash)] px-6 py-5 text-center"><p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[var(--letter-muted)]">A roleta escolheu</p><p className="mt-2 font-serif text-3xl font-semibold text-[var(--letter-dark)]">{result.title}</p>{result.description ? <p className="mt-2 text-sm leading-6 text-[#7d5c67]">{result.description}</p> : null}</div> : <p className="rounded-2xl border border-dashed border-[#ddcbd1] px-4 py-5 text-center text-xs leading-5 text-[#806873]">Gire a roleta e deixe o acaso escolher um momento para vocês.</p>}
+            {error ? <p className="mt-3 text-center text-sm font-semibold text-[#a23f58]">{error}</p> : null}
+          </div>
         </div>
       </div>
     </section>

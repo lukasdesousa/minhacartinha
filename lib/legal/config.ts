@@ -7,4 +7,4 @@ export const LEGAL_VERSIONS = {
 export const LEGAL_EFFECTIVE_DATE_LABEL = "8 de setembro de 2026";
 
 export const LEGAL_CONTACT_PLACEHOLDER =
-  "[PREENCHER: e-mail oficial do responsável pelo Minha Cartinha]";
+  "minhacartinha.suporte@gmail.com";

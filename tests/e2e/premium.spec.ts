@@ -108,7 +108,7 @@ test("Vales e Roleta aparecem como Premium e preservam a edição ao trocar de p
   await expect(wheelSection.getByText(/faz parte do Premium/)).toBeVisible();
   await vouchersSection.getByRole("button", { name: "Escolher Premium — R$ 7,90" }).click();
   await vouchersSection.getByLabel("Incluir Vales do Amor nesta cartinha").check();
-  await vouchersSection.getByLabel("Título").fill("Vale um café na cama");
+  await vouchersSection.getByLabel("Título").fill("Vale Pix de R$100,00");
   await wheelSection.getByLabel("Incluir Roleta do Amor nesta cartinha").check();
   await wheelSection.getByLabel("Título da roleta").fill("O que faremos hoje?");
   await wheelSection.getByLabel("Título", { exact: true }).nth(0).fill("Noite de filmes");

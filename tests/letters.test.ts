@@ -12,6 +12,9 @@ import {
   getLetterExpirationAt,
   isPublishedLetterAvailable,
 } from "../lib/letters/expiration";
+import { LEGAL_VERSIONS } from "../lib/legal/config";
+import { LegalAcceptanceError, parseLegalAcceptance } from "../lib/legal/acceptance";
+import { parseContentReport } from "../lib/legal/content-report";
 
 const image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aT1sAAAAASUVORK5CYII=";
 const question = { id: "one", question: "Onde nos conhecemos?", options: ["Praia", "Parque", "Café", "Cinema"], correctIndex: 2 };
@@ -117,4 +120,22 @@ test("limite do corpo vale sem Content-Length e conteúdo é JSON", async () => 
   const request = new Request("https://example.test", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: "a".repeat(MAX_LETTER_REQUEST_BYTES) }) });
   await assert.rejects(readLetterJson(request), (error: unknown) => error instanceof RequestBodyError && error.status === 413);
   assert.deepEqual(await readLetterJson(new Request("https://example.test", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{\"valid\":true}" })), { valid: true });
+});
+
+test("aceite legal exige confirmação e versões atuais", () => {
+  assert.deepEqual(parseLegalAcceptance({ accepted: true, termsVersion: LEGAL_VERSIONS.terms, privacyVersion: LEGAL_VERSIONS.privacy }), {
+    termsVersion: LEGAL_VERSIONS.terms,
+    privacyVersion: LEGAL_VERSIONS.privacy,
+  });
+  assert.throws(() => parseLegalAcceptance({ accepted: false, termsVersion: LEGAL_VERSIONS.terms, privacyVersion: LEGAL_VERSIONS.privacy }), LegalAcceptanceError);
+  assert.throws(() => parseLegalAcceptance({ accepted: true, termsVersion: "anterior", privacyVersion: LEGAL_VERSIONS.privacy }), LegalAcceptanceError);
+});
+
+test("denúncia valida motivo, contato, honeypot e tempo mínimo", () => {
+  const now = Date.now();
+  const valid = { letterReference: "https://minhacartinha.com.br/c/exemplo", reason: "PERSONAL_DATA", description: "A página expõe meu nome completo sem autorização.", contactEmail: "Pessoa@Example.test", website: "", startedAt: now - 3_000 };
+  assert.equal(parseContentReport(valid, now).contactEmail, "pessoa@example.test");
+  assert.throws(() => parseContentReport({ ...valid, website: "spam" }, now));
+  assert.throws(() => parseContentReport({ ...valid, startedAt: now - 100 }, now));
+  assert.throws(() => parseContentReport({ ...valid, reason: "INVALID" }, now));
 });

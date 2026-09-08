@@ -56,8 +56,8 @@ test("migrations preserve old letters and enforce financial and donation constra
       await db.exec(await readFile(new URL(`${name}/migration.sql`, migrationsUrl), "utf8"));
     }
 
-    const legacy = await db.query('SELECT status, "premiumStatus", "premiumRulesVersion", "quizEnabled", "vouchersEnabled", "loveWheelEnabled", "ownerTokenHash", "showFavoritePlace", "expiresAt" IS NOT NULL AS "hasExpiration" FROM letters WHERE id=\'legacy-letter\'');
-    assert.deepEqual(legacy.rows, [{ status: "PUBLISHED", premiumStatus: "FREE", premiumRulesVersion: 0, quizEnabled: false, vouchersEnabled: false, loveWheelEnabled: false, ownerTokenHash: null, showFavoritePlace: true, hasExpiration: true }]);
+    const legacy = await db.query('SELECT status, "premiumStatus", "premiumRulesVersion", "quizEnabled", "vouchersEnabled", "loveWheelEnabled", "ownerTokenHash", "showFavoritePlace", "expiresAt" IS NOT NULL AS "hasExpiration", "termsAcceptedAt", "termsVersion", "privacyVersion" FROM letters WHERE id=\'legacy-letter\'');
+    assert.deepEqual(legacy.rows, [{ status: "PUBLISHED", premiumStatus: "FREE", premiumRulesVersion: 0, quizEnabled: false, vouchersEnabled: false, loveWheelEnabled: false, ownerTokenHash: null, showFavoritePlace: true, hasExpiration: true, termsAcceptedAt: null, termsVersion: null, privacyVersion: null }]);
     await createLetter("new-letter");
     const created = await db.query('SELECT "premiumStatus", "premiumRulesVersion" FROM letters WHERE id=\'new-letter\'');
     assert.deepEqual(created.rows, [{ premiumStatus: "FREE", premiumRulesVersion: 1 }]);
@@ -101,6 +101,8 @@ test("migrations preserve old letters and enforce financial and donation constra
     await assert.rejects(createDonation({ published: true, reviewed: true }), { code: "23514", constraint: "donations_public_receipt_required" });
     await assert.rejects(createDonation({ published: true, reviewed: true, receiptUrl: "http://example.test/redacted.pdf" }), { code: "23514", constraint: "donations_public_receipt_required" });
     await createDonation({ published: true, reviewed: true, receiptUrl: "https://example.test/redacted.pdf" });
+    await db.query('INSERT INTO content_reports (id,"letterReference",reason,description,"contactEmail","updatedAt") VALUES (\'report-one\',\'/c/fixture\',\'PERSONAL_DATA\',\'Exposição indevida em fixture.\',\'fixture@example.test\',NOW())');
+    assert.deepEqual((await db.query('SELECT status FROM content_reports WHERE id=\'report-one\'')).rows, [{ status: "PENDING" }]);
   } finally {
     await db.close();
   }

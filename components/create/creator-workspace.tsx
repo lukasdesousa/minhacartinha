@@ -18,6 +18,7 @@ import { readSavedDraft, saveDraft, type SavedDraft } from "@/components/create/
 import { FREE_GALLERY_LIMIT, MAX_GALLERY_PHOTOS, PREMIUM_PRICE_LABEL, type CreationPlan, type PremiumStatus } from "@/lib/premium";
 import { getQuizError } from "@/lib/letters/quiz";
 import { getRomanticFeaturesError } from "@/lib/letters/romantic-features";
+import { LEGAL_VERSIONS } from "@/lib/legal/config";
 
 function newIdentity() {
   return {
@@ -50,6 +51,7 @@ export function CreatorWorkspace() {
   const [upgradeReason, setUpgradeReason] = useState<"quiz" | "photos" | "vouchers" | "wheel" | "all">("all");
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [storageError, setStorageError] = useState("");
+  const [legalAccepted, setLegalAccepted] = useState(false);
   const [pendingGallery, setPendingGallery] = useState<GalleryPhoto[]>([]);
   const pendingGalleryRef = useRef<GalleryPhoto[]>([]);
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
@@ -201,6 +203,7 @@ export function CreatorWorkspace() {
     setPlanNotice("");
     setPublishedLetter(null);
     setPublishError("");
+    setLegalAccepted(false);
     pendingGalleryRef.current = [];
     setPendingGallery([]);
     setCurrentStep(0);
@@ -217,6 +220,10 @@ export function CreatorWorkspace() {
 
   async function publishLetter() {
     if (publishingRef.current || !identity) return;
+    if (!legalAccepted) {
+      setPublishError("Confirme os Termos de Uso, a Política de Privacidade e o direito de usar os conteúdos antes de publicar.");
+      return;
+    }
     if (draft.quizEnabled && getQuizError(draft.quiz)) { setPublishError(getQuizError(draft.quiz)); return; }
     const romanticError = getRomanticFeaturesError(draft);
     if (romanticError) { setPublishError(romanticError); return; }
@@ -232,7 +239,14 @@ export function CreatorWorkspace() {
 
     try {
       const savedId = await ensureDraft();
-      const payload = publicationPayload(draft);
+      const payload = {
+        ...publicationPayload(draft),
+        legalAcceptance: {
+          accepted: true,
+          termsVersion: LEGAL_VERSIONS.terms,
+          privacyVersion: LEGAL_VERSIONS.privacy,
+        },
+      };
       const response = await fetch("/api/letters", {
         method: "POST",
         headers: {
@@ -321,6 +335,11 @@ export function CreatorWorkspace() {
               premiumSelected={selectedPlan === "PREMIUM"}
               onUpgrade={choosePremiumFromFeature}
               onCheckout={openFinalCheckout}
+              legalAccepted={legalAccepted}
+              onLegalAcceptedChange={(accepted) => {
+                setLegalAccepted(accepted);
+                if (accepted) setPublishError("");
+              }}
             /></fieldset>}
 
             <aside className="sticky top-[96px] hidden xl:block" aria-label="Prévia em tempo real">

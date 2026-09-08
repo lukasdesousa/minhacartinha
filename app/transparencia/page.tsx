@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Footer } from "@/components/home/footer";
 import { Brand } from "@/components/ui/brand";
 import { ArrowIcon, HeartIcon } from "@/components/ui/icons";
 import { createPageMetadata } from "@/lib/seo";
@@ -126,7 +125,6 @@ export default async function TransparencyPage() {
           </section>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

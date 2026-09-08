@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
 import { siteConfig } from "@/lib/seo";
+import { ConsentProvider } from "@/components/privacy/consent-provider";
+import { Footer } from "@/components/home/footer";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -43,7 +45,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${manrope.variable} ${cormorant.variable}`}
       data-scroll-behavior="smooth"
     >
-      <body>{children}</body>
+      <body>
+        <ConsentProvider>
+          {children}
+          <Footer />
+        </ConsentProvider>
+      </body>
     </html>
   );
 }

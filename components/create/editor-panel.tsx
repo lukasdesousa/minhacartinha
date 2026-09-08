@@ -48,6 +48,8 @@ type EditorPanelProps = {
   premiumSelected: boolean;
   onUpgrade: (reason?: "quiz" | "photos" | "vouchers" | "wheel" | "all", pendingPhotos?: GalleryPhoto[]) => void;
   onCheckout: () => void;
+  legalAccepted: boolean;
+  onLegalAcceptedChange: (accepted: boolean) => void;
 };
 
 export function EditorPanel({
@@ -65,6 +67,8 @@ export function EditorPanel({
   premiumSelected,
   onUpgrade,
   onCheckout,
+  legalAccepted,
+  onLegalAcceptedChange,
 }: EditorPanelProps) {
   const details = stepDetails[currentStep];
 
@@ -105,6 +109,8 @@ export function EditorPanel({
             premiumPaid={premiumPaid}
             premiumSelected={premiumSelected}
             onCheckout={onCheckout}
+            legalAccepted={legalAccepted}
+            onLegalAcceptedChange={onLegalAcceptedChange}
           />
         ) : null}
       </div>

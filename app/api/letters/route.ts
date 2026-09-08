@@ -26,6 +26,7 @@ import { LetterAccessError, getOwnerToken, requireLetterOwner } from "@/lib/lett
 import { readLetterJson, RequestBodyError, REQUEST_KEY_PATTERN } from "@/lib/letters/request";
 import { assertPublishEntitlement, needsPremium, PremiumRequiredError } from "@/lib/letters/entitlement";
 import { getLetterExpirationAt } from "@/lib/letters/expiration";
+import { LegalAcceptanceError, parseLegalAcceptance } from "@/lib/legal/acceptance";
 
 export const runtime = "nodejs";
 
@@ -63,7 +64,13 @@ export async function POST(request: Request) {
     if (draft.status === LetterStatus.PUBLISHED) {
       return Response.json(await getExistingLetterResponse(requestKey, request.url), { headers: { "Cache-Control": "private, no-store" } });
     }
-    const payload = parseLetterPayload(await readLetterJson(request));
+    const rawPayload = await readLetterJson(request);
+    const acceptance = parseLegalAcceptance(
+      rawPayload && typeof rawPayload === "object" && !Array.isArray(rawPayload)
+        ? (rawPayload as Record<string, unknown>).legalAcceptance
+        : undefined,
+    );
+    const payload = parseLetterPayload(rawPayload);
     const premiumFeatures = {
       quizEnabled: payload.quizEnabled,
       galleryCount: payload.images.filter((image) => image.role === "GALLERY").length,
@@ -132,6 +139,9 @@ export async function POST(request: Request) {
           publicationClaimedAt: null,
           status: LetterStatus.PUBLISHED,
           publishedAt: now,
+          termsAcceptedAt: now,
+          termsVersion: acceptance.termsVersion,
+          privacyVersion: acceptance.privacyVersion,
           expiresAt: getLetterExpirationAt(draft.premiumStatus, now),
           emailStatus: EmailDeliveryStatus.PENDING,
         },
@@ -221,7 +231,7 @@ export async function POST(request: Request) {
       await removeCloudinaryImages(uploadedPublicIds);
     }
 
-    if (error instanceof LetterAccessError || error instanceof RequestBodyError || error instanceof PremiumRequiredError) {
+    if (error instanceof LetterAccessError || error instanceof RequestBodyError || error instanceof PremiumRequiredError || error instanceof LegalAcceptanceError) {
       return Response.json({ error: error.message }, { status: error.status });
     }
 

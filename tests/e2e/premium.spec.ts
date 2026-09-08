@@ -135,6 +135,7 @@ for (const count of [0, 1, 2]) {
       const data = route.request().postDataJSON();
       expect(data.gallery).toHaveLength(count);
       expect(data.quizEnabled).toBe(false);
+      expect(data.legalAcceptance).toEqual({ accepted: true, termsVersion: "2026-09-08", privacyVersion: "2026-09-08" });
       expect(route.request().headers().authorization).toMatch(/^Bearer [a-f0-9]{64}$/);
       await route.fulfill({ json: { id: "test-letter", slug: "test-letter", path: "/c/test-letter", publicUrl: "https://example.test/c/test-letter", qrCodeDataUrl: `data:image/png;base64,${png}`, emailStatus: "sent", emailMessage: "E-mail de teste simulado." } });
     });
@@ -147,7 +148,11 @@ for (const count of [0, 1, 2]) {
       await expect(page.getByRole("button", { name: `Remover foto ${count}`, exact: true })).toBeVisible();
     }
     await page.getByRole("navigation", { name: "Etapas de criação" }).getByRole("button", { name: /Revisar/ }).click();
-    await page.getByRole("button", { name: "Publicar e criar link", exact: true }).click();
+    const publishButton = page.getByRole("button", { name: "Publicar e criar link", exact: true });
+    await expect(publishButton).toBeDisabled();
+    await page.getByLabel(/Li e concordo com os Termos de Uso/).check();
+    await expect(publishButton).toBeEnabled();
+    await publishButton.click();
     await expect(page.getByRole("heading", { name: "Sua cartinha está pronta" })).toBeVisible();
     await expect(page.getByRole("img", { name: "QR Code para abrir a cartinha" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Compartilhar", exact: true })).toBeVisible();
@@ -163,4 +168,42 @@ test("Home explica compra única e transparência não inventa dados indisponív
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", /\/transparencia$/);
   await page.screenshot({ path: "test-results/transparencia-mobile.png", fullPage: true });
+});
+
+test("páginas legais, consentimento e gerenciamento posterior funcionam", async ({ page }) => {
+  await page.goto("/termos");
+  await expect(page.getByRole("heading", { level: 1, name: "Termos de Uso" })).toBeVisible();
+  const banner = page.getByRole("region", { name: "Consentimento de cookies" });
+  await expect(banner).toBeVisible();
+  await banner.getByRole("button", { name: "Recusar não essenciais" }).click();
+  await expect(banner).toHaveCount(0);
+
+  await page.reload();
+  await expect(banner).toHaveCount(0);
+  await page.getByRole("button", { name: "Gerenciar cookies" }).click();
+  const preferences = page.getByRole("dialog", { name: "Preferências de cookies" });
+  await expect(preferences.getByText("O projeto não usa Analytics nem publicidade.")).toBeVisible();
+  await preferences.getByLabel("Conteúdo externo do Spotify").check();
+  await preferences.getByRole("button", { name: "Salvar preferências" }).click();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("minhacartinha:consent:v1") ?? "null").externalMedia)).toBe(true);
+
+  await page.goto("/privacidade");
+  await expect(page.getByRole("heading", { level: 1, name: "Política de Privacidade" })).toBeVisible();
+  await page.goto("/cookies");
+  await expect(page.getByRole("heading", { level: 1, name: "Política de Cookies" })).toBeVisible();
+  await page.goto("/denunciar");
+  await expect(page.getByRole("heading", { level: 1, name: "Denunciar conteúdo" })).toBeVisible();
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+});
+
+test("player do Spotify não carrega antes do consentimento", async ({ page }) => {
+  await mockCheckout(page);
+  await page.route("https://open.spotify.com/**", (route) => route.abort());
+  await page.goto("/criar");
+  await page.getByRole("button", { name: "Criar cartinha grátis" }).click();
+  await page.getByRole("navigation", { name: "Etapas de criação" }).getByRole("button", { name: /Estilo/ }).click();
+  await page.getByLabel("Link da música", { exact: true }).fill("https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl");
+  await expect(page.locator('iframe[src*="open.spotify.com/embed"]')).toHaveCount(0);
+  await page.getByRole("button", { name: "Permitir Spotify" }).first().click();
+  await expect(page.locator('iframe[src*="open.spotify.com/embed"]').first()).toBeAttached();
 });

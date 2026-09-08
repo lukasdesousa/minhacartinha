@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { LetterDraft } from "@/components/create/types";
 import type { CreateLetterResponse } from "@/lib/letters/contracts";
 import { PublishedSuccess } from "@/components/create/published-success";
@@ -20,6 +21,8 @@ type ReviewStepProps = {
   premiumPaid: boolean;
   premiumSelected: boolean;
   onCheckout: () => void;
+  legalAccepted: boolean;
+  onLegalAcceptedChange: (accepted: boolean) => void;
 };
 
 export function ReviewStep({
@@ -32,6 +35,8 @@ export function ReviewStep({
   premiumPaid,
   premiumSelected,
   onCheckout,
+  legalAccepted,
+  onLegalAcceptedChange,
 }: ReviewStepProps) {
   const needsPremiumPayment = premiumSelected && !premiumPaid;
   const quizError = draft.quizEnabled ? getQuizError(draft.quiz) : "";
@@ -127,6 +132,17 @@ export function ReviewStep({
         <PublishedSuccess letter={publishedLetter} />
       ) : (
         <div className="rounded-3xl border border-[#e4d5d9] bg-[#fff9fa] p-5 sm:p-6">
+          <label className="mb-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-[#eadde1] bg-white p-4 text-xs leading-5 text-[#745963]">
+            <input
+              type="checkbox"
+              checked={legalAccepted}
+              onChange={(event) => onLegalAcceptedChange(event.target.checked)}
+              className="mt-0.5 size-4 shrink-0 accent-[#8e2f4b]"
+            />
+            <span>
+              Li e concordo com os <Link href="/termos" target="_blank" className="font-semibold text-[#7d3049] underline underline-offset-2">Termos de Uso</Link> e a <Link href="/privacidade" target="_blank" className="font-semibold text-[#7d3049] underline underline-offset-2">Política de Privacidade</Link> e confirmo que tenho direito de utilizar os conteúdos enviados.
+            </span>
+          </label>
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="max-w-md">
               <h3 className="font-serif text-2xl font-semibold text-[#522434]">Pronta para emocionar?</h3>
@@ -135,7 +151,7 @@ export function ReviewStep({
             <button
               type="button"
               onClick={() => needsPremiumPayment ? onCheckout() : void onPublish()}
-              disabled={!canPublish || isPublishing}
+              disabled={!canPublish || isPublishing || (!needsPremiumPayment && !legalAccepted)}
               className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-[#8e2f4b] px-6 text-sm font-bold text-white shadow-[0_10px_25px_rgba(105,31,52,0.2)] transition-all hover:-translate-y-0.5 hover:bg-[#76243d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#963b57] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0"
             >
               {isPublishing ? (
@@ -152,6 +168,7 @@ export function ReviewStep({
             </button>
           </div>
           {!canPublish ? <p className="mt-4 text-xs font-semibold text-[#a44a60]">Preencha os campos principais da história antes de publicar.</p> : null}
+          {canPublish && !needsPremiumPayment && !legalAccepted ? <p className="mt-4 text-xs font-semibold text-[#a44a60]">Marque a confirmação acima para publicar.</p> : null}
           {quizError ? <p className="mt-3 text-xs text-[#a44a60]">{quizError}</p> : null}
           {romanticError ? <p className="mt-3 text-xs text-[#a44a60]">{romanticError}</p> : null}
           {publishError ? <p className="mt-4 text-xs font-semibold text-[#a6374d]" role="alert">{publishError}</p> : null}

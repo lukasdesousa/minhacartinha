@@ -18,5 +18,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 0.6,
     },
+    {
+      url: absoluteUrl("/termos"),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: absoluteUrl("/privacidade"),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: absoluteUrl("/cookies"),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
   ];
 }

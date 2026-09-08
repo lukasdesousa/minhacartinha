@@ -3,7 +3,6 @@ import { Benefits } from "@/components/home/benefits";
 import { AnimalCause } from "@/components/home/animal-cause";
 import { EmotionalSection } from "@/components/home/emotional-section";
 import { FinalCta } from "@/components/home/final-cta";
-import { Footer } from "@/components/home/footer";
 import { Hero } from "@/components/home/hero";
 import { HowItWorks } from "@/components/home/how-it-works";
 import { Navbar } from "@/components/home/navbar";
@@ -71,7 +70,6 @@ export default function Home() {
         <AnimalCause />
         <FinalCta />
       </main>
-      <Footer />
     </div>
   );
 }

@@ -17,7 +17,9 @@ export function Footer() {
             para histórias reais.
           </p>
         </div>
-        <nav aria-label="Informações institucionais" className="flex max-w-2xl flex-wrap items-center justify-center gap-x-5 gap-y-3 text-xs font-semibold text-[#785c66] lg:justify-end">
+        <nav aria-label="Navegação do rodapé" className="flex max-w-3xl flex-wrap items-center justify-center gap-x-5 gap-y-3 text-xs font-semibold text-[#785c66] lg:justify-end">
+          <Link href="/presente-digital" className={linkClass}>Presente digital</Link>
+          <Link href="/guias" className={linkClass}>Guias</Link>
           <Link href="/termos" className={linkClass}>Termos de Uso</Link>
           <Link href="/privacidade" className={linkClass}>Privacidade</Link>
           <Link href="/cookies" className={linkClass}>Cookies</Link>

@@ -20,6 +20,9 @@ type PageMetadataInput = {
   description: string;
   path: string;
   absoluteTitle?: boolean;
+  type?: "website" | "article";
+  publishedTime?: string;
+  modifiedTime?: string;
 };
 
 export function createPageMetadata({
@@ -27,8 +30,26 @@ export function createPageMetadata({
   description,
   path,
   absoluteTitle = false,
+  type = "website",
+  publishedTime,
+  modifiedTime,
 }: PageMetadataInput): Metadata {
   const socialTitle = absoluteTitle ? title : `${title} | ${siteConfig.name}`;
+  const sharedOpenGraph = {
+    locale: siteConfig.locale,
+    url: path,
+    siteName: siteConfig.name,
+    title: socialTitle,
+    description,
+    images: [
+      {
+        url: siteConfig.ogImagePath,
+        width: 1200,
+        height: 630,
+        alt: "Minha Cartinha — cartinhas de amor online e gratuitas",
+      },
+    ],
+  };
 
   return {
     title: absoluteTitle ? { absolute: title } : title,
@@ -36,22 +57,9 @@ export function createPageMetadata({
     alternates: {
       canonical: path,
     },
-    openGraph: {
-      type: "website",
-      locale: siteConfig.locale,
-      url: path,
-      siteName: siteConfig.name,
-      title: socialTitle,
-      description,
-      images: [
-        {
-          url: siteConfig.ogImagePath,
-          width: 1200,
-          height: 630,
-          alt: "Minha Cartinha — cartinhas de amor online e gratuitas",
-        },
-      ],
-    },
+    openGraph: type === "article"
+      ? { ...sharedOpenGraph, type: "article", publishedTime, modifiedTime }
+      : { ...sharedOpenGraph, type: "website" },
     twitter: {
       card: "summary_large_image",
       title: socialTitle,

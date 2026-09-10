@@ -46,7 +46,7 @@ export function createPageMetadata({
         url: siteConfig.ogImagePath,
         width: 1200,
         height: 630,
-        alt: "Minha Cartinha — cartinhas de amor online e gratuitas",
+        alt: "Minha Cartinha - cartinhas de amor online e gratuitas",
       },
     ],
   };

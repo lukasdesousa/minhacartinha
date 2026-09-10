@@ -103,7 +103,7 @@ export function ScratchReveal({ voucher, onReveal }: { voucher: PublicLoveVouche
   </div>;
 }
 
-export function LoveVouchers({ slug, vouchers }: { slug: string; vouchers: PublicLoveVoucher[] }) {
+export function LoveVouchers({ slug, vouchers, demo = false }: { slug: string; vouchers: PublicLoveVoucher[]; demo?: boolean }) {
   const [items, setItems] = useState(vouchers);
   const [selected, setSelected] = useState<PublicLoveVoucher | null>(null);
   const [revealed, setRevealed] = useState(false);
@@ -123,6 +123,15 @@ export function LoveVouchers({ slug, vouchers }: { slug: string; vouchers: Publi
     if (!selected || redeemingRef.current) return;
     redeemingRef.current = true;
     setMessage("Resgatando seu vale...");
+    if (demo) {
+      const voucher = { ...selected, usedCount: selected.usedCount + 1 };
+      setItems((current) => current.map((item) => item.id === voucher.id ? voucher : item));
+      setSelected(voucher);
+      setConfirming(false);
+      setMessage("Vale resgatado nesta demonstração! ❤️");
+      redeemingRef.current = false;
+      return;
+    }
     try {
       const response = await fetch(`/api/letters/${encodeURIComponent(slug)}/vouchers/${encodeURIComponent(selected.id)}/redeem`, { method: "POST", cache: "no-store" });
       const result = await response.json() as { voucher?: PublicLoveVoucher; error?: string };

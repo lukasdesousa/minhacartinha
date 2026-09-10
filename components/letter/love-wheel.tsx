@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { PublicLoveWheelOption } from "@/lib/letters/contracts";
 import { WheelVisual, wheelColor } from "@/components/letter/wheel-visual";
 
-export function LoveWheel({ slug, title, options }: { slug: string; title: string; options: PublicLoveWheelOption[] }) {
+export function LoveWheel({ slug, title, options, demo = false }: { slug: string; title: string; options: PublicLoveWheelOption[]; demo?: boolean }) {
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<PublicLoveWheelOption | null>(null);
@@ -27,6 +27,20 @@ export function LoveWheel({ slug, title, options }: { slug: string; title: strin
     setResult(null);
     setError("");
     try {
+      if (demo) {
+        const randomValue = crypto.getRandomValues(new Uint32Array(1))[0];
+        const index = randomValue % options.length;
+        const option = options[index];
+        const center = (index + 0.5) * 360 / options.length;
+        const base = Math.ceil(rotation / 360) * 360;
+        setRotation(reducedMotion ? base - center : base + 5 * 360 - center);
+        window.setTimeout(() => {
+          setResult(option);
+          setSpinning(false);
+          spinningRef.current = false;
+        }, reducedMotion ? 100 : 4_600);
+        return;
+      }
       const response = await fetch(`/api/letters/${encodeURIComponent(slug)}/wheel/spin`, { method: "POST", cache: "no-store" });
       const data = await response.json() as { option?: PublicLoveWheelOption; index?: number; error?: string };
       if (!response.ok || !data.option || typeof data.index !== "number") throw new Error(data.error || "Não foi possível girar a roleta.");

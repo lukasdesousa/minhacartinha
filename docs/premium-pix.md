@@ -18,15 +18,15 @@ Cartinhas anteriores à migração continuam `FREE` e mantêm sua galeria origin
 
 ## Integração Mercado Pago
 
-SDK oficial `mercadopago` **3.6.0**, versão estável consultada no registro npm, compatível com Node 22 do projeto. Criação pela API atual de **Orders** (`Order.create`, `/v1/orders`), processamento automático e Pix `bank_transfer`. Não existe redirecionamento para checkout externo nem SDK financeiro no navegador.
+SDK oficial `mercadopago` **3.6.0**, compatível com Node 22 do projeto. O fluxo ativo cria o Pix pelo recurso **Payment** (`Payment.create`, `/v1/payments`) do Checkout Transparente. Não existe redirecionamento para checkout externo nem SDK financeiro no navegador.
 
 - `POST /api/payments/pix`: recebe somente a identificação da cartinha e o e-mail do pagador; grava referência, valor, data, estado e chave de idempotência antes de chamar o provedor.
 - `GET /api/payments/pix?letterId=...`: requer o mesmo Bearer, consulta o estado e reconcilia com o provedor respeitando o intervalo do servidor. Respostas privadas usam `no-store`.
-- `POST /api/webhooks/mercado-pago`: valida a assinatura oficial, confere a identificação assinada e busca a Order atual no Mercado Pago. O estado recebido no corpo não é usado como prova.
+- `POST /api/webhooks/mercado-pago`: valida a assinatura oficial, confere a identificação assinada e busca o Payment atual no Mercado Pago. O handler também entende notificações de Order para compatibilidade; o estado recebido no corpo nunca é usado como prova.
 
-O QR Code em base64 e o código copia e cola vêm da transação oficial da Order correspondente. Nunca são gerados manualmente. O prazo solicitado do Pix é de 30 minutos; a data retornada pelo provedor é preservada. O modal consulta a cada 15 segundos enquanto aberto e visível, recuando em falhas.
+O QR Code em base64 e o código copia e cola vêm do `transaction_data` do Payment correspondente. Nunca são gerados manualmente. O prazo solicitado do Pix é de 30 minutos; a data retornada pelo provedor é preservada. O modal consulta a cada 15 segundos enquanto aberto e visível, recuando em falhas.
 
-A reconciliação usa `Order.get` e a consulta financeira oficial `Payment.get` pelo `reference_id` vinculado à Order. Essa consulta complementar confirma moeda BRL, valor, conta recebedora, ambiente real/teste, aprovação, taxas e reembolsos acumulados; a criação continua pela Orders API. Somente uma aprovação confirmada, integral e sem reembolso libera `PREMIUM` em transação no banco. Os demais estados são `FREE` ou `PAYMENT_PENDING`.
+A reconciliação do fluxo ativo usa `Payment.get` e confirma moeda BRL, valor, conta recebedora, ambiente real/teste, aprovação, taxas e reembolsos acumulados. Registros que possuam `providerOrderId` continuam conciliáveis por `Order.get` com confirmação financeira complementar. Somente uma aprovação confirmada, integral e sem reembolso libera `PREMIUM` em transação no banco. Os demais estados são `FREE` ou `PAYMENT_PENDING`.
 
 Uma chave ativa única por cartinha, bloqueios de linha e reservas temporárias no banco evitam duplicatas entre servidores. Em timeout ambíguo, a mesma chave de idempotência é reutilizada. Uma tentativa nova só é aberta após estado terminal confirmado pelo provedor. Um Pix expirado é reconciliado/cancelado no provedor antes de permitir outro. Notificações repetidas reconciliam o mesmo registro; estados antigos não regridem uma liquidação para pendente.
 
@@ -35,9 +35,9 @@ Logs registram evento, identificador interno e código de erro seguro. Não impr
 ## Configuração antes de receber pagamentos
 
 1. Aplicar a migração `20260905120000_premium_pix_transparency` com `npm run db:deploy` no banco do ambiente e gerar o cliente com `npm run db:generate`. As migrações não foram aplicadas automaticamente ao banco configurado em `.env`.
-2. No Mercado Pago, criar/configurar a aplicação para Checkout Transparente com Orders e cadastrar uma chave Pix na conta recebedora.
+2. No Mercado Pago, criar/configurar a aplicação para Checkout Transparente com Payments e cadastrar uma chave Pix na conta recebedora.
 3. Configurar as variáveis privadas abaixo no servidor/Worker. Em Cloudflare, cadastrar como secrets em Settings → Variables and Secrets. O arquivo `.env` não é levado automaticamente para os secrets do Worker.
-4. Em **Suas integrações → aplicação → Webhooks**, cadastrar a URL HTTPS pública `https://SEU_DOMINIO/api/webhooks/mercado-pago`, selecionar o evento **Order** (tópico `order`) para o ambiente correspondente e copiar a chave secreta de assinatura. Não configurar somente o tópico legado `payment`.
+4. Em **Suas integrações → aplicação → Webhooks**, cadastrar a URL HTTPS pública `https://SEU_DOMINIO/api/webhooks/mercado-pago`, selecionar o evento **Pagamentos** (tópico `payment`) para o ambiente correspondente e copiar a chave secreta de assinatura. Enquanto a criação continuar em `Payment.create`, não cadastrar somente o evento de Order.
 5. Garantir que essa rota aceite POST público do Mercado Pago, sem login, desafio interativo, redirecionamento ou cache da CDN. A autenticação da notificação é a assinatura. A URL de desenvolvimento localhost requer túnel HTTPS para receber notificações.
 6. Homologar com as credenciais/cenários de teste oficiais e `MERCADO_PAGO_LIVE_MODE=false`. Confirmar criação, copia e cola, aprovação e retentativa do webhook no ambiente configurado. Pagamentos de teste não entram na página de transparência.
 7. Para receber dinheiro real, usar as credenciais da conta correta, webhook de produção e `MERCADO_PAGO_LIVE_MODE=true`. Validar um Pix de ponta a ponta na conta antes de abrir vendas e conferir aprovação no banco, publicação e e-mail. Nenhuma cobrança real foi criada durante a implementação.
@@ -62,5 +62,5 @@ Verificar notificações e falhas de conciliação no painel do Mercado Pago. A 
 ## Documentação oficial consultada
 
 - [SDK oficial Node.js](https://github.com/mercadopago/sdk-nodejs)
-- [Pix pela Orders API](https://www.mercadopago.com.br/developers/pt/docs/checkout-api-orders/payment-integration/pix)
-- [Notificações de Orders](https://www.mercadopago.com.br/developers/pt/docs/checkout-api-orders/notifications)
+- [Referência de criação de pagamentos](https://www.mercadopago.com.br/developers/pt/reference/payments/_payments/post)
+- [Webhooks e notificações de pagamentos](https://www.mercadopago.com.br/developers/pt/docs/your-integrations/notifications/webhooks)

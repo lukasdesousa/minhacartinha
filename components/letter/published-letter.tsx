@@ -22,9 +22,10 @@ import {
 
 type PublishedLetterProps = {
   letter: PublicLetterData;
+  demo?: boolean;
 };
 
-export function PublishedLetter({ letter }: PublishedLetterProps) {
+export function PublishedLetter({ letter, demo = false }: PublishedLetterProps) {
   const [activeSlide, setActiveSlide] = useState(0);
   const theme = getTheme(letter.themeId);
   const safeSlideIndex = Math.min(activeSlide, Math.max(letter.gallery.length - 1, 0));
@@ -277,8 +278,8 @@ export function PublishedLetter({ letter }: PublishedLetterProps) {
       ) : null}
 
       {letter.quizEnabled && letter.quiz.length > 0 ? <CoupleQuiz questions={letter.quiz} /> : null}
-      {letter.vouchersEnabled && letter.vouchers.length > 0 ? <LoveVouchers slug={letter.slug} vouchers={letter.vouchers} /> : null}
-      {letter.loveWheelEnabled && letter.loveWheelOptions.length >= 2 ? <LoveWheel slug={letter.slug} title={letter.loveWheelTitle} options={letter.loveWheelOptions} /> : null}
+      {letter.vouchersEnabled && letter.vouchers.length > 0 ? <LoveVouchers slug={letter.slug} vouchers={letter.vouchers} demo={demo} /> : null}
+      {letter.loveWheelEnabled && letter.loveWheelOptions.length >= 2 ? <LoveWheel slug={letter.slug} title={letter.loveWheelTitle} options={letter.loveWheelOptions} demo={demo} /> : null}
 
       <section className="relative isolate overflow-hidden bg-[var(--letter-dark)] px-5 py-24 text-center text-white sm:px-8 sm:py-32">
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_30%,rgba(255,255,255,0.08),transparent_28%),radial-gradient(circle_at_82%_75%,rgba(255,255,255,0.06),transparent_24%)]" aria-hidden="true" />

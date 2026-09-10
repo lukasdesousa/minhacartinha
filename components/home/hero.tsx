@@ -38,7 +38,7 @@ export function Hero() {
             <ButtonLink href="/criar" className="min-h-14 px-7 text-base">
               Criar minha cartinha grátis
             </ButtonLink>
-            <ButtonLink href="#preview" variant="secondary" className="min-h-14 px-7 text-base">
+            <ButtonLink href="/exemplo" variant="secondary" className="min-h-14 px-7 text-base">
               Ver uma cartinha
             </ButtonLink>
           </div>

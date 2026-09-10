@@ -28,6 +28,28 @@ async function mockCheckout(page: Page) {
   return { approve: () => { approved = true; }, creates: () => creates };
 }
 
+test("home abre uma cartinha Premium completa de demonstração", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("region", { name: "Consentimento de cookies" }).getByRole("button", { name: "Recusar não essenciais" }).click();
+  await page.getByRole("link", { name: "Ver uma cartinha" }).click();
+  await expect(page).toHaveURL(/\/exemplo$/);
+  await expect(page.getByRole("heading", { name: "Clara & Gabriel" })).toBeVisible();
+  await expect(page.getByText("Nosso amor acontece há")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Quanto você lembra da gente? ❤️" })).toBeVisible();
+
+  const vouchers = page.locator('section[aria-labelledby="love-vouchers-title"]');
+  await expect(vouchers.getByRole("heading", { name: "Vales do Amor" })).toBeVisible();
+  await vouchers.getByRole("button").first().click();
+  const voucherDialog = page.getByRole("dialog", { name: "Raspe para descobrir" });
+  await voucherDialog.getByRole("button", { name: "Revelar surpresa sem raspar" }).click();
+  await expect(voucherDialog.getByRole("heading", { name: "Vale R$ 50,00 no Pix" })).toBeVisible();
+  await voucherDialog.getByRole("button", { name: "Fechar" }).click();
+
+  const wheel = page.locator('section[aria-labelledby="love-wheel-title"]');
+  await wheel.getByRole("button", { name: "Girar a roleta" }).click();
+  await expect(wheel.getByText("A roleta escolheu")).toBeVisible({ timeout: 7_000 });
+});
+
 test("terceira foto convida ao Premium e preserva fotos no celular", async ({ page }) => {
   await mockCheckout(page);
   await page.goto("/criar");
@@ -121,7 +143,7 @@ test("Vales e Roleta aparecem como Premium e preservam a edição ao trocar de p
   await expect(vouchersSection.getByLabel("Incluir Vales do Amor nesta cartinha")).toHaveCount(0);
   await vouchersSection.getByRole("button", { name: "Escolher Premium — R$ 7,90" }).click();
   await vouchersSection.getByLabel("Incluir Vales do Amor nesta cartinha").check();
-  await expect(vouchersSection.getByLabel("Título")).toHaveValue("Vale um café na cama");
+  await expect(vouchersSection.getByLabel("Título")).toHaveValue("Vale Pix de R$100,00 🤑");
   await wheelSection.getByLabel("Incluir Roleta do Amor nesta cartinha").check();
   await expect(wheelSection.getByLabel("Título da roleta")).toHaveValue("O que faremos hoje?");
   await expect(wheelSection.getByLabel("Título", { exact: true }).nth(0)).toHaveValue("Noite de filmes");

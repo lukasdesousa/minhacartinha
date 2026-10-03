@@ -83,6 +83,23 @@ export function calculateCauseSummary(payments: CausePayment[], donatedCents: nu
   };
 }
 
+function paymentPeriodKey(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Fortaleza", year: "numeric", month: "2-digit" }).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value;
+  return `${value("year")}-${value("month")}`;
+}
+
+/** Allocation grouped by the month in which each approved payment was recorded. */
+export function calculateMonthlyAllocations(payments: CausePayment[]) {
+  const grouped = new Map<string, CausePayment[]>();
+  for (const payment of payments) {
+    if (!payment.approvedAt) continue;
+    const key = paymentPeriodKey(payment.approvedAt);
+    grouped.set(key, [...(grouped.get(key) ?? []), payment]);
+  }
+  return Object.fromEntries([...grouped].map(([key, monthlyPayments]) => [key, calculateCauseSummary(monthlyPayments, 0).allocatedCents]));
+}
+
 export function formatBRL(cents: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 }

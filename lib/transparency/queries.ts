@@ -1,5 +1,5 @@
 import { withPrisma } from "@/lib/prisma";
-import { allocationBasisLabels, calculateCauseSummary, type AllocationBasis } from "@/lib/transparency/accounting";
+import { allocationBasisLabels, calculateCauseSummary, calculateMonthlyAllocations, type AllocationBasis } from "@/lib/transparency/accounting";
 import { publicHttpsUrl } from "@/lib/transparency/receipts";
 
 export async function getTransparencyReport() {
@@ -34,7 +34,7 @@ export async function getTransparencyReport() {
         return [{ ...donation, receiptUrl, institution: { ...donation.institution, websiteUrl: publicHttpsUrl(donation.institution.websiteUrl) } }];
       });
       const donatedCents = verifiedDonations.reduce((sum, donation) => sum + donation.amountCents, 0);
-      return { summary: calculateCauseSummary(payments, donatedCents), donations: verifiedDonations };
+      return { summary: calculateCauseSummary(payments, donatedCents), monthlyAllocatedCents: calculateMonthlyAllocations(payments), donations: verifiedDonations };
     }, { isolationLevel: "RepeatableRead" }));
     return { available: true as const, currentBasis, updatedAt: now, ...report };
   } catch {

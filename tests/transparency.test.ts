@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { calculateCauseSummary, type CausePayment } from "../lib/transparency/accounting";
+import { calculateCauseSummary, calculateMonthlyAllocations, type CausePayment } from "../lib/transparency/accounting";
 import { publicHttpsUrl } from "../lib/transparency/receipts";
 
 const payment: CausePayment = {
@@ -22,6 +22,14 @@ test("gross basis uses confirmed real revenue and integer cent rounding", () => 
   assert.equal(summary.consideredCents, 1580);
   assert.equal(summary.allocatedCents, 238);
   assert.equal(summary.reservedCents, 238);
+});
+
+test("monthly allocation keeps each period independent in Fortaleza time", () => {
+  const monthly = calculateMonthlyAllocations([
+    { ...payment, approvedAt: new Date("2026-09-30T23:30:00-03:00") },
+    { ...payment, approvedAt: new Date("2026-10-01T00:30:00-03:00") },
+  ]);
+  assert.deepEqual(monthly, { "2026-09": 119, "2026-10": 119 });
 });
 
 test("non-approved statuses and sandbox transactions cannot inflate allocations", () => {

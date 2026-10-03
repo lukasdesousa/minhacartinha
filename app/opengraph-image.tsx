@@ -1,16 +1,23 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import fs from "node:fs";
 import { ImageResponse } from "next/og";
+import path from "node:path";
 
 export const alt = "Minha Cartinha — uma cartinha de amor online com foto, música e QR Code";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const coverData = await readFile(
-  join(process.cwd(), "public", "demo", "clara-e-gabriel", "capa-og.jpg"),
-  "base64",
+// Vinext replaces this exact import.meta.url pattern with the image bytes at
+// build time, so the Cloudflare Worker never tries to access a filesystem.
+
+const coverPath = path.join(
+  process.cwd(),
+  "app",
+  "opengraph-cover.jpg"
 );
-const coverSrc = `data:image/jpeg;base64,${coverData}`;
+
+const coverData: Buffer = fs.readFileSync(coverPath);
+
+const coverSrc = `data:image/jpeg;base64,${coverData.toString("base64")}`;
 
 function Heart({ size = 26 }: { size?: number }) {
   return (

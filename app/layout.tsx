@@ -45,6 +45,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${manrope.variable} ${cormorant.variable}`}
       data-scroll-behavior="smooth"
     >
+      <head>
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1890191988556480"
+          crossOrigin="anonymous"></script>
+      </head>
       <body>
         <ConsentProvider>
           {children}

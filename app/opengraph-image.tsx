@@ -4,9 +4,6 @@ export const alt = "Minha Cartinha — uma cartinha de amor online com foto, mú
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-// Vinext replaces this exact import.meta.url pattern with the image bytes at
-// build time, so the Cloudflare Worker never tries to access a filesystem.
-
 const coverSrc = `https://minhacartinha.com.br/opengraph-cover.jpg`;
 
 function Heart({ size = 26 }: { size?: number }) {

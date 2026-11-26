@@ -18,7 +18,6 @@ const premiumFeatures = [
   "Mais de 2 fotos: até 6 no carrossel",
   "Todos os recursos Premium desta cartinha",
   "Cartinha disponível para sempre",
-  "15% destinados a causa animal (ONGs parceiras)",
 ];
 
 export function Plans() {

@@ -23,7 +23,6 @@ export default function TermsPage() {
       <LegalSection title="2. Gratuito e Premium">
         <p>A modalidade gratuita inclui os recursos indicados no editor e, atualmente, mantém a cartinha publicada por 2 dias. A modalidade Premium custa <strong>R$ 7,90 por cartinha</strong>, em pagamento único, e libera o conjunto de recursos Premium para aquela cartinha. Não se trata de assinatura.</p>
         <p>O pagamento é processado por Pix por meio do Mercado Pago. A liberação depende da confirmação do provedor. Um Pix pendente, expirado, rejeitado ou cancelado não libera os recursos Premium. As condições apresentadas no checkout prevalecem se a operação não puder ser concluída.</p>
-        <p>15% dos ganhos do Minha Cartinha são destinados a instituições que ajudam animais de rua. Valores destinados e repasses efetivamente realizados são informações diferentes e podem ser consultados na página de <Link href="/transparencia">Transparência</Link>.</p>
       </LegalSection>
 
       <LegalSection title="3. Responsabilidade por conteúdo e autorizações">

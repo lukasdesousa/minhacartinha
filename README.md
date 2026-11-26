@@ -2,9 +2,9 @@
 
 Aplicação em Next.js para criar e compartilhar cartinhas digitais personalizadas. O editor permite escrever a história, adicionar fotos, escolher o tema e publicar uma página exclusiva.
 
-Grátis com até 2 fotos no carrossel e validade de 2 dias após a publicação. Premium por **R$ 7,90 em compra única por cartinha**, sem expiração, com Quiz do casal, Vales do Amor, Roleta do Amor e até 6 fotos, pago por Pix dentro do site. A iniciativa da causa animal e os repasses comprovados ficam em `/transparencia`.
+Grátis com até 2 fotos no carrossel e validade de 2 dias após a publicação. Premium por **R$ 7,90 em compra única por cartinha**, sem expiração, com Quiz do casal, Vales do Amor, Roleta do Amor e até 6 fotos, pago por Pix dentro do site.
 
-Configuração e operação: [Premium, Pix e webhook](docs/premium-pix.md) e [cálculo dos 15% e cadastro de comprovantes](docs/transparency.md).
+Configuração e operação: [Premium, Pix e webhook](docs/premium-pix.md)
 
 ## Tecnologias
 

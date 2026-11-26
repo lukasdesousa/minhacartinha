@@ -1,7 +1,3 @@
-# Transparência da causa animal
-
-A iniciativa destina 15% de uma base operacional explícita. **Destinação calculada não é doação realizada.** `/transparencia` consulta registros reais no servidor; falha de banco produz estado indisponível, nunca números zero inventados.
-
 ## Critério financeiro
 
 `ANIMAL_CAUSE_ALLOCATION_BASIS` aceita:

@@ -23,7 +23,6 @@ export function Footer() {
           <Link href="/termos" className={linkClass}>Termos de Uso</Link>
           <Link href="/privacidade" className={linkClass}>Privacidade</Link>
           <Link href="/cookies" className={linkClass}>Cookies</Link>
-          <Link href="/transparencia" className={linkClass}>Transparência</Link>
           <Link href="/denunciar" className={linkClass}>Denunciar conteúdo</Link>
           <ManageCookiesButton className={linkClass} />
           <Link href="/criar" className={`${linkClass} w-full font-bold text-[#873d54] sm:w-auto`}>Criar uma cartinha grátis</Link>

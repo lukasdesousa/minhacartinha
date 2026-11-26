@@ -162,8 +162,6 @@ export function PremiumCheckout({ open, reason, letterId, ownerToken, isPremium,
           <button type="submit" disabled={creating} className={buttonClass}>{creating ? "Preparando Pix..." : payment ? `Gerar novo Pix — ${PREMIUM_PRICE_LABEL}` : `Desbloquear Premium — ${PREMIUM_PRICE_LABEL}`}</button>
         </form> : <p className="text-center text-xs leading-6 text-[#8c6774]">Estamos preparando os dados do pagamento. Aguarde um instante.</p>}
       </>}
-      {error && <p className="mt-4 rounded-xl bg-[#fbecef] p-3 text-xs leading-5 text-[#9b435d]" role="alert">{error}</p>}
-      <p className="mt-6 border-t border-[#eadce1] pt-5 text-center text-[11px] leading-5 text-[#967682]">15% dos ganhos do Minha Cartinha são destinados a instituições que ajudam animais de rua. ❤️🐾 <Link href="/transparencia" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">Entenda o compromisso</Link>.</p>
       {!isPremium && <button type="button" onClick={onClose} className="mt-4 min-h-10 w-full text-center text-xs font-semibold text-[#997887]">Continuar editando</button>}
     </div>
   </dialog>;

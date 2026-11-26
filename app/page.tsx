@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Benefits } from "@/components/home/benefits";
-import { AnimalCause } from "@/components/home/animal-cause";
 import { EmotionalSection } from "@/components/home/emotional-section";
 import { FinalCta } from "@/components/home/final-cta";
 import { Hero } from "@/components/home/hero";
@@ -67,7 +66,6 @@ export default function Home() {
         <Benefits />
         <Plans />
         <EmotionalSection />
-        <AnimalCause />
         <FinalCta />
       </main>
     </div>
